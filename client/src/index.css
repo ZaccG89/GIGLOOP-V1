@@ -1,0 +1,164 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Inter:wght@400;500;600&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* ── Giggity Purple Dark ── */
+    --background: 237 38% 4%;        /* #05060A */
+    --foreground: 0 0% 100%;
+
+    --card: 228 37% 7%;              /* #0B0E16 */
+    --card-foreground: 0 0% 100%;
+
+    --popover: 228 37% 7%;
+    --popover-foreground: 0 0% 100%;
+
+    --primary: 263 100% 68%;         /* #9B5CFF */
+    --primary-foreground: 228 37% 7%;
+
+    --secondary: 228 40% 10%;        /* #0F1424 */
+    --secondary-foreground: 0 0% 100%;
+
+    --muted: 228 40% 10%;
+    --muted-foreground: 215 12% 64%; /* #9AA0AE */
+
+    --accent: 228 40% 14%;
+    --accent-foreground: 0 0% 100%;
+
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
+
+    --border: 228 20% 16%;
+    --input: 228 40% 10%;
+    --ring: 263 100% 68%;
+
+    --radius: 1.125rem;
+
+    --font-display: 'Plus Jakarta Sans', sans-serif;
+    --font-sans: 'Inter', sans-serif;
+
+    /* Raw tokens for non-Tailwind usage */
+    --bg: #05060A;
+    --surface: #0B0E16;
+    --surface2: #0F1424;
+    --text: #FFFFFF;
+    --silver: #D7D9E0;
+    --muted-color: #9AA0AE;
+    --border-raw: rgba(255,255,255,0.10);
+    --border2-raw: rgba(255,255,255,0.16);
+    --purple: #9B5CFF;
+    --purpleGlow: rgba(155,92,255,0.35);
+    --purpleGlow2: rgba(155,92,255,0.18);
+  }
+
+  body {
+    background:
+      radial-gradient(900px 500px at 50% -140px, var(--purpleGlow2), transparent 60%),
+      radial-gradient(700px 450px at 80% 20%, rgba(255,255,255,0.04), transparent 60%),
+      var(--bg);
+    color: var(--text);
+    font-family: var(--font-sans);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    font-family: var(--font-display);
+    letter-spacing: -0.02em;
+  }
+
+  * {
+    @apply selection:bg-primary/20 selection:text-white;
+  }
+}
+
+@layer components {
+  /* Cards */
+  .g-card {
+    background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.02));
+    border: 1px solid var(--border-raw);
+    border-radius: 18px;
+  }
+
+  .g-card-solid {
+    background: var(--surface);
+    border: 1px solid var(--border-raw);
+    border-radius: 18px;
+  }
+
+  /* Text helpers */
+  .g-silver { color: var(--silver); }
+  .g-muted  { color: var(--muted-color); }
+
+  /* Buttons */
+  .g-btn-primary {
+    background: var(--purple);
+    color: var(--surface);
+    border-radius: 18px;
+    box-shadow:
+      0 0 0 1px rgba(155,92,255,0.25),
+      0 14px 40px rgba(155,92,255,0.22);
+    transition: opacity 0.15s, transform 0.15s;
+  }
+  .g-btn-primary:hover  { opacity: 0.9; }
+  .g-btn-primary:active { transform: scale(0.97); }
+
+  .g-btn-secondary {
+    border: 1px solid var(--border2-raw);
+    background: rgba(255,255,255,0.04);
+    border-radius: 18px;
+    transition: background 0.15s;
+  }
+  .g-btn-secondary:hover { background: rgba(255,255,255,0.07); }
+
+  .g-pill {
+    border: 1px solid var(--border2-raw);
+    background: rgba(255,255,255,0.03);
+    border-radius: 999px;
+  }
+
+  .g-input {
+    width: 100%;
+    border: 1px solid var(--border2-raw);
+    background: rgba(255,255,255,0.04);
+    border-radius: 12px;
+    padding: 10px 14px;
+    font-size: 14px;
+    color: var(--silver);
+    outline: none;
+    transition: border-color 0.15s;
+  }
+  .g-input:focus { border-color: var(--purple); }
+  .g-input::placeholder { color: var(--muted-color); }
+}
+
+@layer utilities {
+  .glass-panel {
+    @apply backdrop-blur-xl;
+    background: rgba(11,14,22,0.70);
+    border: 1px solid var(--border-raw);
+  }
+
+  .hover-elevate {
+    @apply transition-all duration-300 ease-out hover:-translate-y-0.5;
+  }
+
+  .active-press {
+    @apply active:scale-95 transition-transform duration-150;
+  }
+
+  /* Hide scrollbar for clean feeds */
+  .no-scrollbar::-webkit-scrollbar { display: none; }
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  /* Purple glow on focus rings */
+  .glow-focus:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 2px var(--purple), 0 0 20px var(--purpleGlow);
+  }
+}

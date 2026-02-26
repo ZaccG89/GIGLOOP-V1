@@ -1,0 +1,253 @@
+import { useState, useEffect } from "react";
+import { Layout } from "@/components/layout";
+import { Button, Card, Input } from "@/components/ui-elements";
+import { useAdminSubmissions, useApproveSubmission, useRejectSubmission } from "@/hooks/use-admin";
+import { useAuth } from "@/hooks/use-auth";
+import { useLocation } from "wouter";
+import { ShieldAlert, Check, X, Calendar, MapPin, Building2, Clock, CheckCircle } from "lucide-react";
+import { format } from "date-fns";
+import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import type { Venue } from "@shared/schema";
+
+function usePendingVenues(secret: string) {
+  return useQuery<Venue[]>({
+    queryKey: ["/api/admin/venues", secret],
+    queryFn: async () => {
+      const res = await fetch("/api/admin/venues", { headers: { "x-admin-secret": secret }, credentials: "include" });
+      if (!res.ok) throw new Error("Failed");
+      return res.json();
+    },
+    enabled: !!secret,
+  });
+}
+
+function useApproveVenue(secret: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/venues/${id}/approve`, { method: "POST", headers: { "x-admin-secret": secret }, credentials: "include" });
+      if (!res.ok) throw new Error("Failed to approve");
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/venues"] }),
+  });
+}
+
+function useRejectVenue(secret: string) {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const res = await fetch(`/api/admin/venues/${id}/reject`, { method: "POST", headers: { "x-admin-secret": secret }, credentials: "include" });
+      if (!res.ok) throw new Error("Failed to reject");
+      return res.json();
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: ["/api/admin/venues"] }),
+  });
+}
+
+export default function AdminSubmissions() {
+  const { data: user, isLoading: userLoading } = useAuth();
+  const [, setLocation] = useLocation();
+  const [secret, setSecret] = useState("");
+  const [activeSecret, setActiveSecret] = useState("");
+  const [tab, setTab] = useState<"gigs" | "venues">("gigs");
+
+  const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
+  const approve = useApproveSubmission(activeSecret);
+  const reject = useRejectSubmission(activeSecret);
+
+  const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues(activeSecret);
+  const approveVenue = useApproveVenue(activeSecret);
+  const rejectVenue = useRejectVenue(activeSecret);
+
+  useEffect(() => {
+    if (!userLoading && (!user || !user.email?.includes("admin"))) {
+      setLocation("/");
+    }
+  }, [user, userLoading, setLocation]);
+
+  if (userLoading) return null;
+  if (!user || !user.email?.includes("admin")) return null;
+
+  const handleSecretSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    setActiveSecret(secret);
+  };
+
+  return (
+    <Layout>
+      <div className="mb-8">
+        <h1 className="text-3xl md:text-4xl font-extrabold text-white mb-2 flex items-center gap-3">
+          <ShieldAlert className="text-primary" /> Admin Panel
+        </h1>
+        <p className="text-muted-foreground">Review gig submissions and venue verification requests.</p>
+      </div>
+
+      {!activeSecret || isError ? (
+        <Card className="p-8 max-w-md mx-auto mt-12 border-primary/20">
+          <form onSubmit={handleSecretSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-bold text-white mb-2">Enter Admin Secret</label>
+              <Input
+                type="password"
+                required
+                value={secret}
+                onChange={e => setSecret(e.target.value)}
+                placeholder="••••••••"
+              />
+            </div>
+            <Button type="submit" className="w-full">Authenticate</Button>
+            {isError && <p className="text-destructive text-sm text-center">Invalid secret. Try again.</p>}
+          </form>
+        </Card>
+      ) : (
+        <>
+          {/* Tabs */}
+          <div className="flex gap-2 mb-6">
+            <button
+              onClick={() => setTab("gigs")}
+              data-testid="tab-gigs"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors ${tab === "gigs" ? "bg-primary text-black" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            >
+              <Calendar className="w-4 h-4" />
+              Gig Submissions
+              {(submissions?.filter(s => s.status === "pending").length ?? 0) > 0 && (
+                <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {submissions?.filter(s => s.status === "pending").length}
+                </span>
+              )}
+            </button>
+            <button
+              onClick={() => setTab("venues")}
+              data-testid="tab-venues"
+              className={`flex items-center gap-2 px-5 py-2.5 rounded-xl font-semibold text-sm transition-colors ${tab === "venues" ? "bg-primary text-black" : "bg-white/5 text-white/70 hover:bg-white/10"}`}
+            >
+              <Building2 className="w-4 h-4" />
+              Venue Verification
+              {(pendingVenues?.length ?? 0) > 0 && (
+                <span className="bg-yellow-500 text-black text-[10px] font-bold px-1.5 py-0.5 rounded-full">
+                  {pendingVenues?.length}
+                </span>
+              )}
+            </button>
+            <div className="ml-auto">
+              <Button variant="outline" size="sm" onClick={() => setActiveSecret("")}>Lock Panel</Button>
+            </div>
+          </div>
+
+          {/* Gig submissions tab */}
+          {tab === "gigs" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-white">
+                Pending Submissions ({submissions?.filter(s => s.status === "pending").length || 0})
+              </h2>
+
+              {subsLoading ? (
+                <div className="text-center py-12 text-white">Loading...</div>
+              ) : submissions?.filter(s => s.status === "pending").length === 0 ? (
+                <div className="text-center py-12 bg-white/5 rounded-xl border border-white/5 text-muted-foreground">
+                  All caught up! No pending submissions.
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {submissions?.filter(s => s.status === "pending").map(sub => (
+                    <Card key={sub.id} className="p-6 flex flex-col md:flex-row gap-6 justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2">
+                          <span className="bg-yellow-500/20 text-yellow-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded">Pending</span>
+                          <span className="text-xs text-muted-foreground">
+                            {sub.submitterName || "Anonymous"} ({sub.submitterEmail || "N/A"})
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-white">{sub.eventName}</h3>
+                        <div className="flex flex-wrap gap-4 text-sm text-muted-foreground pt-2">
+                          <div className="flex items-center gap-1.5 text-white/80">
+                            <MapPin className="w-4 h-4 text-primary" />{sub.venueName || "Unknown Venue"}
+                          </div>
+                          <div className="flex items-center gap-1.5 text-white/80">
+                            <Calendar className="w-4 h-4 text-primary" />{format(new Date(sub.startTime), "MMM do, h:mm a")}
+                          </div>
+                        </div>
+                        <div className="pt-2">
+                          <strong className="text-xs text-white/60 uppercase tracking-wider block mb-1">Artists:</strong>
+                          <p className="text-white font-medium">{sub.artists}</p>
+                        </div>
+                        {sub.notes && (
+                          <div className="bg-black/30 p-3 rounded-lg border border-white/5 mt-2 text-sm text-white/70">
+                            "{sub.notes}"
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex md:flex-col gap-2 shrink-0 justify-center">
+                        <Button variant="primary" onClick={() => approve.mutate(sub.id)} disabled={approve.isPending || reject.isPending}>
+                          <Check className="w-4 h-4" /> Approve
+                        </Button>
+                        <Button variant="danger" onClick={() => reject.mutate(sub.id)} disabled={approve.isPending || reject.isPending}>
+                          <X className="w-4 h-4" /> Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+
+          {/* Venues tab */}
+          {tab === "venues" && (
+            <div className="space-y-6">
+              <h2 className="text-xl font-bold text-white">
+                Pending Venue Verifications ({pendingVenues?.length || 0})
+              </h2>
+
+              {venuesLoading ? (
+                <div className="text-center py-12 text-white">Loading...</div>
+              ) : !pendingVenues?.length ? (
+                <div className="text-center py-12 bg-white/5 rounded-xl border border-white/5 text-muted-foreground">
+                  No pending venue applications.
+                </div>
+              ) : (
+                <div className="grid gap-4">
+                  {pendingVenues.map(venue => (
+                    <Card key={venue.id} className="p-6 flex flex-col md:flex-row gap-6 justify-between">
+                      <div className="space-y-2 flex-1">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="bg-yellow-500/20 text-yellow-500 text-[10px] uppercase font-bold px-2 py-0.5 rounded flex items-center gap-1">
+                            <Clock className="w-3 h-3" /> Pending
+                          </span>
+                        </div>
+                        <h3 className="text-2xl font-extrabold text-white flex items-center gap-2">
+                          <Building2 className="w-6 h-6 text-primary" />
+                          {venue.name}
+                        </h3>
+                        <div className="flex flex-wrap gap-4 text-sm text-white/70 pt-1">
+                          {venue.suburb && <span><MapPin className="w-3 h-3 inline mr-1 text-primary" />{venue.suburb}, {venue.city} {venue.state}</span>}
+                          {venue.contactEmail && <span>✉ {venue.contactEmail}</span>}
+                          {venue.website && <a href={venue.website} target="_blank" rel="noopener noreferrer" className="text-primary hover:underline">🌐 {venue.website}</a>}
+                          {venue.instagram && <span>📸 {venue.instagram}</span>}
+                        </div>
+                        {venue.bio && (
+                          <div className="bg-black/30 p-3 rounded-lg border border-white/5 mt-2 text-sm text-white/70 max-w-xl">
+                            {venue.bio}
+                          </div>
+                        )}
+                      </div>
+                      <div className="flex md:flex-col gap-2 shrink-0 justify-center">
+                        <Button variant="primary" onClick={() => approveVenue.mutate(venue.id)} disabled={approveVenue.isPending || rejectVenue.isPending}>
+                          <CheckCircle className="w-4 h-4" /> Approve
+                        </Button>
+                        <Button variant="danger" onClick={() => rejectVenue.mutate(venue.id)} disabled={approveVenue.isPending || rejectVenue.isPending}>
+                          <X className="w-4 h-4" /> Reject
+                        </Button>
+                      </div>
+                    </Card>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </>
+      )}
+    </Layout>
+  );
+}
