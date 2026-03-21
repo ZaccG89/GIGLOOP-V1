@@ -1,21 +1,47 @@
-import { pgTable, text, varchar, serial, integer, boolean, timestamp, real, jsonb, primaryKey, doublePrecision } from "drizzle-orm/pg-core";
+import { pgTable, text, varchar, serial, integer, boolean, timestamp, real, jsonb, primaryKey, doublePrecision, uniqueIndex } from "drizzle-orm/pg-core";
 import { createInsertSchema } from "drizzle-zod";
 import { z } from "zod";
 import { sql } from "drizzle-orm";
 
 export const users = pgTable("users", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
+
   displayName: text("display_name"),
-  username: text("username").unique(),
+
+  username: text("username").unique(),   // ADD THIS LINE
+
   bio: text("bio"),
   avatarUrl: text("avatar_url"),
   isPrivate: boolean("is_private").default(false).notNull(),
-  email: text("email"),
+
+  email: text("email").unique(),
+  passwordHash: text("password_hash"),
+
   locationLat: doublePrecision("location_lat"),
   locationLng: doublePrecision("location_lng"),
-  radiusKm: integer("radius_km").default(50),
-  role: text("role").default("fan").notNull(), // fan | venue | admin
+
+  radiusKm: integer("radius_km").default(150),
+
+  role: text("role").default("fan").notNull(),
 });
+
+export const eventAttendance = pgTable(
+  "event_attendance",
+  {
+    id: serial("id").primaryKey(),
+    userId: integer("user_id").notNull(),
+    eventId: integer("event_id").notNull(),
+    createdAt: timestamp("created_at").defaultNow().notNull(),
+  },
+  (table) => ({
+    userEventUnique: uniqueIndex("event_attendance_user_event_idx").on(
+      table.userId,
+      table.eventId
+    ),
+  })
+);
+
+
 
 export const spotifyAccounts = pgTable("spotify_accounts", {
   userId: varchar("user_id").primaryKey().references(() => users.id),
@@ -32,14 +58,18 @@ export const userArtists = pgTable("user_artists", {
   userId: varchar("user_id").references(() => users.id).notNull(),
   spotifyArtistId: text("spotify_artist_id").notNull(),
   artistName: text("artist_name").notNull(),
+  artistImageUrl: text("artist_image_url"),
   affinityScore: real("affinity_score").notNull(),
   source: text("source"),
   updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow(),
 }, (table) => {
   return {
-    pk: primaryKey({ columns: [table.userId, table.spotifyArtistId] })
+    pk: primaryKey({ columns: [table.userId, table.spotifyArtistId] }),
   };
 });
+
+export type UserArtist = typeof userArtists.$inferSelect;
+export type InsertUserArtist = typeof userArtists.$inferInsert;
 
 export const venues = pgTable("venues", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
@@ -124,6 +154,14 @@ export const userLikes = pgTable("user_likes", {
   pk: primaryKey({ columns: [table.userId, table.eventId] })
 }));
 
+export const userSoundchecks = pgTable("user_soundchecks", {
+  userId: varchar("user_id").references(() => users.id).notNull(),
+  eventId: varchar("event_id").references(() => events.id).notNull(),
+  soundcheckedAt: timestamp("soundchecked_at", { withTimezone: true }).defaultNow(),
+}, (table) => ({
+  pk: primaryKey({ columns: [table.userId, table.eventId] })
+}));
+
 export const follows = pgTable("follows", {
   id: varchar("id").primaryKey().default(sql`gen_random_uuid()`),
   followerId: varchar("follower_id").references(() => users.id).notNull(),
@@ -157,8 +195,8 @@ export type SpotifyAccount = typeof spotifyAccounts.$inferSelect;
 export type InsertSpotifyAccount = typeof spotifyAccounts.$inferInsert;
 export type AppleAccount = typeof appleAccounts.$inferSelect;
 export type InsertAppleAccount = typeof appleAccounts.$inferInsert;
-export type UserArtist = typeof userArtists.$inferSelect;
-export type InsertUserArtist = typeof userArtists.$inferInsert;
+export type UserArtistRow = typeof userArtists.$inferSelect;
+export type InsertUserArtists = typeof userArtists.$inferInsert;
 export type Venue = typeof venues.$inferSelect;
 export type InsertVenue = typeof venues.$inferInsert;
 export type Event = typeof events.$inferSelect;
@@ -172,3 +210,5 @@ export type UserLike = typeof userLikes.$inferSelect;
 export type Follow = typeof follows.$inferSelect;
 export type InsertFollow = typeof follows.$inferInsert;
 export type UserShare = typeof userShares.$inferSelect;
+export type EventAttendance = typeof eventAttendance.$inferSelect;
+export type InsertEventAttendance = typeof eventAttendance.$inferInsert;

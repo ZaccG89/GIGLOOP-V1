@@ -54,7 +54,7 @@ export function useAppleMusicLogin() {
       // 3. Configure MusicKit
       await window.MusicKit.configure({
         developerToken,
-        app: { name: "Giggity", build: "1.0.0" },
+        app: { name: "GigLoop", build: "1.0.0" },
       });
 
       // 4. Authorize — shows Apple Music permission dialog

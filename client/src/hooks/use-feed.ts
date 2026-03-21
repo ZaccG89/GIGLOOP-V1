@@ -11,63 +11,70 @@ export type FeedItem = {
 
 export class FeedError extends Error {
   code: string;
+
   constructor(message: string, code: string) {
     super(message);
+    this.name = "FeedError";
     this.code = code;
   }
+}
+
+async function fetchJson<T>(input: RequestInfo, init?: RequestInit): Promise<T> {
+  const res = await fetch(input, {
+    credentials: "include",
+    ...init,
+  });
+
+  if (!res.ok) {
+    if (res.status === 400) {
+      const errorData = await res.json().catch(() => null);
+      throw new FeedError(
+        errorData?.message || "Bad Request",
+        errorData?.code || "unknown"
+      );
+    }
+
+    throw new Error(`Request failed: ${res.status}`);
+  }
+
+  return res.json();
 }
 
 export function useFeed() {
   return useQuery<FeedItem[], FeedError>({
     queryKey: [api.feed.get.path],
-    queryFn: async () => {
-      const res = await fetch(api.feed.get.path, { credentials: "include" });
-      
-      if (!res.ok) {
-        if (res.status === 400) {
-          const errorData = await res.json();
-          throw new FeedError(errorData.message || "Bad Request", errorData.code || "unknown");
-        }
-        throw new Error("Failed to fetch feed");
-      }
-      
-      return res.json();
-    },
+    queryFn: () => fetchJson<FeedItem[]>(api.feed.get.path),
   });
 }
 
 export function useSyncSpotify() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async () => {
-      const res = await fetch(api.spotify.syncTopArtists.path, {
+    mutationFn: () =>
+      fetchJson(api.spotify.syncTopArtists.path, {
         method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to sync Spotify artists");
-      return res.json();
-    },
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.feed.get.path] });
-    }
+      queryClient.invalidateQueries({
+        queryKey: [api.feed.get.path],
+      });
+    },
   });
 }
 
 export function useIngestSeq() {
   const queryClient = useQueryClient();
-  
+
   return useMutation({
-    mutationFn: async () => {
-      const res = await fetch(api.ingest.ticketmaster.path, {
+    mutationFn: () =>
+      fetchJson(api.ingest.ticketmaster.path, {
         method: "POST",
-        credentials: "include",
-      });
-      if (!res.ok) throw new Error("Failed to ingest gigs");
-      return res.json();
-    },
+      }),
     onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: [api.feed.get.path] });
-    }
+      queryClient.invalidateQueries({
+        queryKey: [api.feed.get.path],
+      });
+    },
   });
 }

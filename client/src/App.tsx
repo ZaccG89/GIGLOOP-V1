@@ -3,6 +3,9 @@ import { queryClient } from "./lib/queryClient";
 import { QueryClientProvider } from "@tanstack/react-query";
 import { Toaster } from "@/components/ui/toaster";
 import { TooltipProvider } from "@/components/ui/tooltip";
+import SpotifyConnect from "@/pages/spotify-connect";
+import SearchPage from "./pages/search";
+
 
 // Pages
 import Login from "./pages/login";
@@ -15,21 +18,26 @@ import VenueRegister from "./pages/venue-register";
 import Profile from "./pages/profile";
 import UserProfile from "./pages/user-profile";
 import NotFound from "./pages/not-found";
+import EventDetail from "./pages/event-detail"; 
+import Signup from "./pages/signup";
+
 
 function Router() {
   return (
     <Switch>
       <Route path="/login" component={Login} />
-      <Route path="/" component={Home} />
+      <Route path="/signup" component={Signup} />
+      <Route path="/spotify-connect" component={SpotifyConnect} />
       <Route path="/settings" component={Settings} />
       <Route path="/venues" component={Venues} />
+      <Route path="/events/:id" component={EventDetail} />
       <Route path="/venues/:id" component={VenueDetail} />
       <Route path="/admin/submissions" component={AdminSubmissions} />
       <Route path="/venue/register" component={VenueRegister} />
       <Route path="/profile" component={Profile} />
       <Route path="/users/:id" component={UserProfile} />
-
-      {/* Fallback to 404 */}
+      <Route path="/" component={Home} />
+      <Route path="/search" component={SearchPage} />
       <Route component={NotFound} />
     </Switch>
   );

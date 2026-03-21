@@ -1,4 +1,4 @@
-# Giggity MVP
+# GigLoop MVP
 
 A local gig discovery app that syncs with Spotify and Apple Music to learn user's music taste, shows nearby concerts matching their favorite artists, ingests events from Ticketmaster, and allows community gig submissions with admin moderation.
 

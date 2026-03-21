@@ -1,19 +1,10 @@
-import logoUrl from "/giggity-logo.png";
-
-type Props = {
-  size?: number;
-  className?: string;
-};
-
-export default function LogoMark({ size = 32, className = "" }: Props) {
+export default function Logo() {
   return (
-    <img
-      src={logoUrl}
-      alt="Giggity"
-      width={size}
-      height={size}
-      draggable={false}
-      className={`object-contain select-none ${className}`}
-    />
+    <div className="flex items-center gap-2">
+      <img src="/logo-g.png" className="w-8 h-8" alt="GigLoop logo" />
+      <span className="text-lg font-semibold tracking-tight text-white drop-shadow-[0_0_10px_rgba(139,92,246,0.6)]">
+        GigLoop
+      </span>
+    </div>
   );
 }

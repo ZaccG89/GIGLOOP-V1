@@ -89,7 +89,7 @@ export default function VenueRegister() {
           <h1 className="text-3xl md:text-4xl font-extrabold text-white">Venue Registration</h1>
         </div>
         <p className="text-muted-foreground">
-          Register your venue to start posting gigs directly to Giggity.
+          Register your venue to start posting gigs directly to GigLoop.
         </p>
       </div>
 
@@ -105,7 +105,7 @@ export default function VenueRegister() {
       )}
 
       {/* Show form if not pending/approved, or if rejected so they can reapply */}
-      {(!existing || status === "rejected" || status === "unverified") && (
+      (!existing || status === "rejected") && (
         <Card className="p-6 md:p-8">
           <h2 className="text-xl font-bold text-white mb-6">Venue Details</h2>
           <form onSubmit={handleSubmit} className="space-y-5 max-w-2xl">
@@ -200,7 +200,7 @@ export default function VenueRegister() {
             </button>
           </form>
         </Card>
-      )}
+      )
 
       {/* Show venue info card if pending or approved */}
       {existing && status && ["pending", "approved"].includes(status) && (

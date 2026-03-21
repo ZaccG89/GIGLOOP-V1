@@ -42,7 +42,7 @@ export default function VenueDetail() {
   const [submitted, setSubmitted] = useState(false);
 
   useEffect(() => {
-    if (!userLoading && !user) setLocation("/login");
+    if (!userLoading && !user) setLocation("/signup");
   }, [user, userLoading, setLocation]);
 
   if (userLoading || venueLoading) return null;
