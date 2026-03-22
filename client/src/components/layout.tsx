@@ -25,15 +25,15 @@ export function Layout({ children }: { children: ReactNode }) {
   const isGuest = !!user && !user.email;
 
   const navItems = [
-  { href: "/", icon: Home, label: "Feed" },
-  {
-    href: isGuest ? "/signup" : "/profile",
-    icon: User,
-    label: isGuest ? "Create Profile" : "Profile",
-  },
-  { href: "/venues", icon: MapPin, label: "Venues" },
-  { href: "/settings", icon: Settings, label: "Settings" },
-];
+    { href: "/", icon: Home, label: "Feed" },
+    {
+      href: isGuest ? "/signup" : "/profile",
+      icon: User,
+      label: isGuest ? "Create Profile" : "Profile",
+    },
+    { href: "/venues", icon: MapPin, label: "Venues" },
+    { href: "/settings", icon: Settings, label: "Settings" },
+  ];
 
   if (user?.email?.includes("admin")) {
     navItems.push({
@@ -123,6 +123,24 @@ export function Layout({ children }: { children: ReactNode }) {
 
       <main className="flex-1 md:ml-64 relative min-h-screen">
         <div className="max-w-4xl mx-auto w-full px-4 sm:px-6 py-6 md:py-10">
+          {isGuest && (
+            <div className="mb-6 flex gap-2">
+              <Link
+                href="/login"
+                className="flex-1 text-center px-4 py-3 rounded-xl border border-white/10 text-sm font-medium text-white bg-white/5 hover:bg-white/10 transition"
+              >
+                Log In
+              </Link>
+
+              <Link
+                href="/signup"
+                className="flex-1 text-center px-4 py-3 rounded-xl bg-purple-500 text-white text-sm font-medium hover:opacity-90 transition"
+              >
+                Sign Up
+              </Link>
+            </div>
+          )}
+
           {children}
         </div>
       </main>
