@@ -20,6 +20,7 @@ import UserProfile from "./pages/user-profile";
 import NotFound from "./pages/not-found";
 import EventDetail from "./pages/event-detail"; 
 import Signup from "./pages/signup";
+import ArtistsPage from "@/pages/artists";
 
 
 function Router() {
@@ -39,6 +40,7 @@ function Router() {
       <Route path="/" component={Home} />
       <Route path="/search" component={SearchPage} />
       <Route component={NotFound} />
+      <Route path="/artists/:id" component={ArtistsPage} />
     </Switch>
   );
 }
