@@ -46,11 +46,18 @@ export default function SearchPage() {
 
     for (const rawItem of Array.isArray(feed) ? feed : []) {
       const item = rawItem as any;
-      const matchedArtists = Array.isArray(item?.matchedArtists)
-        ? item.matchedArtists
-        : [];
 
-      for (const rawArtist of matchedArtists) {
+      const possibleArtists: string[] = [];
+
+      if (Array.isArray(item?.matchedArtists)) {
+        possibleArtists.push(...item.matchedArtists);
+      }
+
+      if (typeof item?.event?.name === "string") {
+        possibleArtists.push(item.event.name);
+      }
+
+      for (const rawArtist of possibleArtists) {
         const artistName =
           typeof rawArtist === "string" ? rawArtist.trim() : "";
 
@@ -100,9 +107,7 @@ export default function SearchPage() {
           ? String(event.venueId)
           : event.venue?.id != null
             ? String(event.venue.id)
-            : event.id != null
-              ? String(event.id)
-              : venueName;
+            : venueName;
 
       const key = venueName.toLowerCase();
       const existing = venueMap.get(key);
