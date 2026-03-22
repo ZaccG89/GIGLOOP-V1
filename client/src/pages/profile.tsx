@@ -777,15 +777,21 @@ function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: bool
     );
   }
 
-  return (
+ return (
   <div className="space-y-3 pb-6">
     {[...artists]
       .sort((a, b) => b.affinityScore - a.affinityScore)
       .map((artist, i) => (
-        <div
+        <button
           key={`${artist.userId}-${artist.spotifyArtistId}`}
           data-testid={`row-artist-${i}`}
-          className="flex items-center gap-4 px-4 py-4 rounded-2xl"
+          type="button"
+          onClick={() =>
+            window.location.href = `/artists/${encodeURIComponent(
+              artist.spotifyArtistId
+            )}?name=${encodeURIComponent(artist.artistName)}`
+          }
+          className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left"
           style={{
             background: "var(--surface)",
             border: "1px solid var(--border-raw)",
@@ -810,7 +816,9 @@ function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: bool
 
           <div
             className="w-12 h-12 rounded-full flex items-center justify-center text-base font-extrabold text-white shrink-0"
-            style={{ background: "linear-gradient(135deg, var(--purple), #7B3FD8)" }}
+            style={{
+              background: "linear-gradient(135deg, var(--purple), #7B3FD8)",
+            }}
           >
             {artist.artistName.charAt(0)}
           </div>
@@ -845,7 +853,7 @@ function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: bool
               </span>
             </div>
           </div>
-        </div>
+        </button>
       ))}
   </div>
 );
