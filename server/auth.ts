@@ -25,6 +25,7 @@ export async function verifySession(token: string) {
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const token =
+  req.cookies?.gigloop_session ||
   req.cookies?.GigLoop_session ||
   req.cookies?.giggity_session ||
   req.cookies?.Giggity_session;
