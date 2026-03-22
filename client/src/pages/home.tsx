@@ -62,15 +62,18 @@ export default function Home() {
           <button
             type="button"
             onClick={() => setLocation("/search")}
-            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl"
+            className="shrink-0 flex items-center gap-2 px-4 py-2.5 rounded-full backdrop-blur-md transition-all"
             style={{
-              background: "var(--surface)",
-              border: "1px solid var(--border-raw)",
-              color: "var(--muted-color)",
+              background:
+                "linear-gradient(135deg, rgba(255,255,255,0.08), rgba(139,92,246,0.14))",
+              border: "1px solid rgba(255,255,255,0.12)",
+              boxShadow:
+                "0 0 0 1px rgba(255,255,255,0.03) inset, 0 8px 24px rgba(0,0,0,0.28), 0 0 20px rgba(139,92,246,0.12)",
+              color: "var(--silver)",
             }}
           >
             <Search className="w-4 h-4" />
-            <span className="text-sm font-medium">Search</span>
+            <span className="text-sm font-semibold tracking-tight">Search</span>
           </button>
         </div>
 
