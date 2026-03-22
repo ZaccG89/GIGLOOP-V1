@@ -97,7 +97,7 @@ export default function SearchPage() {
 
         {!query && (
           <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-            Start typing to search...
+            Start typing to search artists or venues...
           </p>
         )}
 
