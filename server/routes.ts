@@ -877,39 +877,28 @@ export async function registerRoutes(
   );
 
   app.get(api.feed.get.path, async (req: Request, res: Response) => {
+  try {
+    const userId = await getOptionalUserId(req);
+    const feed = await buildFeedForUser(userId ?? null);
+    return res.json(feed);
+  } catch (e: any) {
+    console.error("GET FEED ERROR:", e);
+
     try {
-      const userId = await getOptionalUserId(req);
-
-      if (!userId) {
-        const events = await storage.getUpcomingEvents(42);
-        return res.json(
-          events.map((event) => ({
-            event,
-            matchScore: 0,
-            distanceKm: undefined,
-            matchedArtists: [],
-          }))
-        );
-      }
-
-      const feed = await buildFeedForUser(userId);
-      return res.json(feed);
-    } catch (e: any) {
-      if (e.message === "no_location") {
-        const events = await storage.getUpcomingEvents(42);
-        return res.json(
-          events.map((event) => ({
-            event,
-            matchScore: 0,
-            distanceKm: undefined,
-            matchedArtists: [],
-          }))
-        );
-      }
-
+      const events = await storage.getUpcomingEvents(42);
+      return res.json(
+        events.map((event) => ({
+          event,
+          matchScore: 0,
+          distanceKm: undefined,
+          matchedArtists: [],
+        }))
+      );
+    } catch {
       return res.status(500).json({ message: "Failed to generate feed" });
     }
-  });
+  }
+});
 
   app.get(api.venues.search.path, async (req: Request, res: Response) => {
     const q = (req.query.q as string) || "";

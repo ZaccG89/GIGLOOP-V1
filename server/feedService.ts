@@ -28,8 +28,8 @@ function haversineKm(
   return R * c;
 }
 
-export async function buildFeedForUser(userId: string) {
-  const user = await storage.getUser(userId);
+export async function buildFeedForUser(userId?: string | null) {
+  const user = userId ? await storage.getUser(userId) : null;
   const allEvents = await storage.getUpcomingEvents(90);
 
   const locationLat = user?.locationLat;
