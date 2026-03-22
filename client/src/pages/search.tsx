@@ -1,68 +1,108 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { Search, Music2, MapPin } from "lucide-react";
+import { Search, Music2, MapPin, User as UserIcon } from "lucide-react";
 import { useFeed } from "@/hooks/use-feed";
+import { useQuery } from "@tanstack/react-query";
+
+type ArtistResult = {
+  name: string;
+  count: number;
+};
+
+type VenueResult = {
+  id: string;
+  name: string;
+  count: number;
+};
+
+type UserResult = {
+  id: string;
+  username?: string;
+  displayName?: string;
+};
 
 export default function SearchPage() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
-  const { data: feed = [], isLoading } = useFeed();
+  const { data: feed = [], isLoading: feedLoading } = useFeed();
+
+  const { data: users = [], isLoading: usersLoading } = useQuery<UserResult[]>({
+    queryKey: ["/api/users/search"],
+    queryFn: async () => {
+      const res = await fetch("/api/users/search", { credentials: "include" });
+      if (!res.ok) return [];
+      return res.json();
+    },
+    retry: false,
+  });
 
   const trimmedQuery = query.trim().toLowerCase();
 
-  const artistResults = useMemo(() => {
-    const artistMap = new Map<string, { name: string; count: number }>();
+  const artistResults = useMemo<ArtistResult[]>(() => {
+    if (!trimmedQuery) return [];
 
-    (feed || []).forEach((item: any) => {
+    const artistMap = new Map<string, ArtistResult>();
+
+    for (const rawItem of Array.isArray(feed) ? feed : []) {
+      const item = rawItem as any;
       const matchedArtists = Array.isArray(item?.matchedArtists)
         ? item.matchedArtists
         : [];
 
-      matchedArtists.forEach((artist: string) => {
-        if (!artist) return;
+      for (const rawArtist of matchedArtists) {
+        const artistName =
+          typeof rawArtist === "string" ? rawArtist.trim() : "";
 
-        const key = artist.toLowerCase();
+        if (!artistName) continue;
+
+        const key = artistName.toLowerCase();
         const existing = artistMap.get(key);
 
         if (existing) {
           existing.count += 1;
         } else {
-          artistMap.set(key, { name: artist, count: 1 });
+          artistMap.set(key, { name: artistName, count: 1 });
         }
-      });
-    });
+      }
+    }
 
     return Array.from(artistMap.values())
-      .filter((artist) =>
-        trimmedQuery ? artist.name.toLowerCase().includes(trimmedQuery) : false
-      )
+      .filter((artist) => artist.name.toLowerCase().includes(trimmedQuery))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
       .slice(0, 8);
   }, [feed, trimmedQuery]);
 
-  const venueResults = useMemo(() => {
-    const venueMap = new Map<string, { id: string; name: string; count: number }>();
+  const venueResults = useMemo<VenueResult[]>(() => {
+    if (!trimmedQuery) return [];
 
-    (feed || []).forEach((item: any) => {
+    const venueMap = new Map<string, VenueResult>();
+
+    for (const rawItem of Array.isArray(feed) ? feed : []) {
+      const item = rawItem as any;
       const event = item?.event;
-      if (!event) return;
 
-      const rawVenueName =
-        event.venueName ||
-        event.venue?.name ||
-        event.venue ||
-        "";
+      if (!event || typeof event !== "object") continue;
 
-      const rawVenueId =
-        event.venueId ||
-        event.venue?.id ||
-        "";
+      const venueName =
+        typeof event.venueName === "string"
+          ? event.venueName.trim()
+          : typeof event.venue?.name === "string"
+            ? event.venue.name.trim()
+            : typeof event.venue === "string"
+              ? event.venue.trim()
+              : "";
 
-      const venueName = String(rawVenueName).trim();
-      const venueId = String(rawVenueId || event.id || venueName).trim();
+      if (!venueName) continue;
 
-      if (!venueName) return;
+      const venueId =
+        event.venueId != null
+          ? String(event.venueId)
+          : event.venue?.id != null
+            ? String(event.venue.id)
+            : event.id != null
+              ? String(event.id)
+              : venueName;
 
       const key = venueName.toLowerCase();
       const existing = venueMap.get(key);
@@ -76,15 +116,27 @@ export default function SearchPage() {
           count: 1,
         });
       }
-    });
+    }
 
     return Array.from(venueMap.values())
-      .filter((venue) =>
-        trimmedQuery ? venue.name.toLowerCase().includes(trimmedQuery) : false
-      )
+      .filter((venue) => venue.name.toLowerCase().includes(trimmedQuery))
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
       .slice(0, 8);
   }, [feed, trimmedQuery]);
+
+  const userResults = useMemo<UserResult[]>(() => {
+    if (!trimmedQuery) return [];
+
+    return (Array.isArray(users) ? users : [])
+      .filter((user) => {
+        const display = (user.displayName || "").toLowerCase();
+        const username = (user.username || "").toLowerCase();
+        return display.includes(trimmedQuery) || username.includes(trimmedQuery);
+      })
+      .slice(0, 8);
+  }, [users, trimmedQuery]);
+
+  const isLoading = feedLoading || usersLoading;
 
   return (
     <Layout>
@@ -94,7 +146,7 @@ export default function SearchPage() {
             Search
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--muted-color)" }}>
-            Find artists and venues
+            Find artists, venues, and people
           </p>
         </div>
 
@@ -113,25 +165,25 @@ export default function SearchPage() {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search artists, venues..."
+            placeholder="Search artists, venues, people..."
             className="w-full bg-transparent outline-none text-base"
             style={{ color: "var(--silver)" }}
           />
         </div>
 
-        {!query && (
+        {!trimmedQuery && (
           <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-            Start typing to search artists or venues...
+            Start typing to search artists, venues, or people...
           </p>
         )}
 
-        {query && isLoading && (
+        {trimmedQuery && isLoading && (
           <p className="text-sm" style={{ color: "var(--muted-color)" }}>
             Searching...
           </p>
         )}
 
-        {query && !isLoading && (
+        {trimmedQuery && !isLoading && (
           <div className="space-y-6 pb-6">
             <div className="space-y-3">
               <h2
@@ -172,16 +224,10 @@ export default function SearchPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <p
-                        className="font-semibold truncate"
-                        style={{ color: "var(--silver)" }}
-                      >
+                      <p className="font-semibold truncate" style={{ color: "var(--silver)" }}>
                         {artist.name}
                       </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--muted-color)" }}
-                      >
+                      <p className="text-xs" style={{ color: "var(--muted-color)" }}>
                         {artist.count} matching gig{artist.count === 1 ? "" : "s"}
                       </p>
                     </div>
@@ -225,17 +271,58 @@ export default function SearchPage() {
                     </div>
 
                     <div className="min-w-0">
-                      <p
-                        className="font-semibold truncate"
-                        style={{ color: "var(--silver)" }}
-                      >
+                      <p className="font-semibold truncate" style={{ color: "var(--silver)" }}>
                         {venue.name}
                       </p>
-                      <p
-                        className="text-xs"
-                        style={{ color: "var(--muted-color)" }}
-                      >
+                      <p className="text-xs" style={{ color: "var(--muted-color)" }}>
                         {venue.count} upcoming gig{venue.count === 1 ? "" : "s"}
+                      </p>
+                    </div>
+                  </button>
+                ))
+              )}
+            </div>
+
+            <div className="space-y-3">
+              <h2
+                className="text-sm font-semibold uppercase tracking-wide"
+                style={{ color: "var(--muted-color)" }}
+              >
+                People
+              </h2>
+
+              {userResults.length === 0 ? (
+                <p className="text-sm" style={{ color: "var(--muted-color)" }}>
+                  No people found
+                </p>
+              ) : (
+                userResults.map((user) => (
+                  <button
+                    key={user.id}
+                    type="button"
+                    onClick={() => setLocation(`/users/${encodeURIComponent(user.id)}`)}
+                    className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
+                    style={{
+                      background: "var(--surface)",
+                      border: "1px solid var(--border-raw)",
+                    }}
+                  >
+                    <div
+                      className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
+                      style={{
+                        background: "rgba(255,255,255,0.06)",
+                        color: "var(--silver)",
+                      }}
+                    >
+                      <UserIcon className="w-4 h-4" />
+                    </div>
+
+                    <div className="min-w-0">
+                      <p className="font-semibold truncate" style={{ color: "var(--silver)" }}>
+                        {user.displayName || user.username || "User"}
+                      </p>
+                      <p className="text-xs" style={{ color: "var(--muted-color)" }}>
+                        @{user.username || "profile"}
                       </p>
                     </div>
                   </button>
