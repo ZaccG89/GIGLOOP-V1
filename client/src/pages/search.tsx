@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
-import { Search, Music2, MapPin } from "lucide-react";
+import { Search, Music2 } from "lucide-react";
 import { useFeed } from "@/hooks/use-feed";
 
 export default function SearchPage() {
@@ -14,8 +14,14 @@ export default function SearchPage() {
   const artistResults = useMemo(() => {
     const artistMap = new Map<string, { name: string; count: number }>();
 
-    feed.forEach((item) => {
-      (item.matchedArtists || []).forEach((artist) => {
+    (feed || []).forEach((item: any) => {
+      const matchedArtists = Array.isArray(item?.matchedArtists)
+        ? item.matchedArtists
+        : [];
+
+      matchedArtists.forEach((artist: string) => {
+        if (!artist) return;
+
         const key = artist.toLowerCase();
         const existing = artistMap.get(key);
 
@@ -32,34 +38,7 @@ export default function SearchPage() {
         trimmedQuery ? artist.name.toLowerCase().includes(trimmedQuery) : false
       )
       .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 8);
-  }, [feed, trimmedQuery]);
-
-  const venueResults = useMemo(() => {
-    const venueMap = new Map<string, { id: string; name: string; count: number }>();
-
-    feed.forEach((item) => {
-      const venueId = String((item.event as any).venueId ?? item.event.id);
-      const venueName = item.event.venueName ?? "";
-
-      if (!venueId || !venueName) return;
-
-      const key = venueName.toLowerCase();
-      const existing = venueMap.get(key);
-
-      if (existing) {
-        existing.count += 1;
-      } else {
-        venueMap.set(key, { id: venueId, name: venueName, count: 1 });
-      }
-    });
-
-    return Array.from(venueMap.values())
-      .filter((venue) =>
-        trimmedQuery ? venue.name.toLowerCase().includes(trimmedQuery) : false
-      )
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 8);
+      .slice(0, 12);
   }, [feed, trimmedQuery]);
 
   return (
@@ -70,7 +49,7 @@ export default function SearchPage() {
             Search
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--muted-color)" }}>
-            Find artists and venues
+            Find artists
           </p>
         </div>
 
@@ -89,7 +68,7 @@ export default function SearchPage() {
             autoFocus
             value={query}
             onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search artists, venues..."
+            placeholder="Search artists..."
             className="w-full bg-transparent outline-none text-base"
             style={{ color: "var(--silver)" }}
           />
@@ -97,7 +76,7 @@ export default function SearchPage() {
 
         {!query && (
           <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-            Start typing to search artists or venues...
+            Start typing to search artists...
           </p>
         )}
 
@@ -108,121 +87,54 @@ export default function SearchPage() {
         )}
 
         {query && !isLoading && (
-          <div className="space-y-6 pb-6">
-            <div className="space-y-3">
-              <h2
-                className="text-sm font-semibold uppercase tracking-wide"
-                style={{ color: "var(--muted-color)" }}
-              >
-                Artists
-              </h2>
-
-              {artistResults.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-                  No artists found
-                </p>
-              ) : (
-                artistResults.map((artist) => (
-                  <button
-                    key={artist.name}
-                    type="button"
-                    onClick={() =>
-                      setLocation(
-                        `/artists/${encodeURIComponent(artist.name)}?name=${encodeURIComponent(artist.name)}`
-                      )
-                    }
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left"
+          <div className="space-y-3 pb-6">
+            {artistResults.length === 0 ? (
+              <p className="text-sm" style={{ color: "var(--muted-color)" }}>
+                No artists found
+              </p>
+            ) : (
+              artistResults.map((artist) => (
+                <button
+                  key={artist.name}
+                  type="button"
+                  onClick={() =>
+                    setLocation(
+                      `/artists/${encodeURIComponent(artist.name)}?name=${encodeURIComponent(artist.name)}`
+                    )
+                  }
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
+                  style={{
+                    background: "var(--surface)",
+                    border: "1px solid var(--border-raw)",
+                  }}
+                >
+                  <div
+                    className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
                     style={{
-                      background: "var(--surface)",
-                      border: "1px solid var(--border-raw)",
+                      background: "linear-gradient(135deg, var(--purple), #7B3FD8)",
+                      color: "white",
                     }}
                   >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                        style={{
-                          background:
-                            "linear-gradient(135deg, var(--purple), #7B3FD8)",
-                          color: "white",
-                        }}
-                      >
-                        <Music2 className="w-4 h-4" />
-                      </div>
+                    <Music2 className="w-4 h-4" />
+                  </div>
 
-                      <div className="min-w-0">
-                        <p
-                          className="font-semibold truncate"
-                          style={{ color: "var(--silver)" }}
-                        >
-                          {artist.name}
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: "var(--muted-color)" }}
-                        >
-                          {artist.count} matching gig{artist.count === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
-
-            <div className="space-y-3">
-              <h2
-                className="text-sm font-semibold uppercase tracking-wide"
-                style={{ color: "var(--muted-color)" }}
-              >
-                Venues
-              </h2>
-
-              {venueResults.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-                  No venues found
-                </p>
-              ) : (
-                venueResults.map((venue) => (
-                  <button
-                    key={venue.id}
-                    type="button"
-                    onClick={() => setLocation(`/venues/${venue.id}`)}
-                    className="w-full flex items-center justify-between px-4 py-3 rounded-2xl text-left"
-                    style={{
-                      background: "var(--surface)",
-                      border: "1px solid var(--border-raw)",
-                    }}
-                  >
-                    <div className="flex items-center gap-3 min-w-0">
-                      <div
-                        className="w-10 h-10 rounded-full flex items-center justify-center shrink-0"
-                        style={{
-                          background: "rgba(255,255,255,0.06)",
-                          color: "var(--silver)",
-                        }}
-                      >
-                        <MapPin className="w-4 h-4" />
-                      </div>
-
-                      <div className="min-w-0">
-                        <p
-                          className="font-semibold truncate"
-                          style={{ color: "var(--silver)" }}
-                        >
-                          {venue.name}
-                        </p>
-                        <p
-                          className="text-xs"
-                          style={{ color: "var(--muted-color)" }}
-                        >
-                          {venue.count} upcoming gig{venue.count === 1 ? "" : "s"}
-                        </p>
-                      </div>
-                    </div>
-                  </button>
-                ))
-              )}
-            </div>
+                  <div className="min-w-0">
+                    <p
+                      className="font-semibold truncate"
+                      style={{ color: "var(--silver)" }}
+                    >
+                      {artist.name}
+                    </p>
+                    <p
+                      className="text-xs"
+                      style={{ color: "var(--muted-color)" }}
+                    >
+                      {artist.count} matching gig{artist.count === 1 ? "" : "s"}
+                    </p>
+                  </div>
+                </button>
+              ))
+            )}
           </div>
         )}
       </div>
