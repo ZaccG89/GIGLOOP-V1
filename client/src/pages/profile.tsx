@@ -3,6 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { useAuth } from "@/hooks/use-auth";
 import { Layout } from "@/components/layout";
 import { format } from "date-fns";
+
 import {
   Bookmark,
   Heart,
@@ -556,7 +557,13 @@ export default function Profile() {
         />
       )}
 
-      {tab === "artists" && <ArtistList artists={artists} loading={artistsLoading} />}
+      {tab === "artists" && (
+        <ArtistList
+         artists={artists}
+         loading={artistsLoading}
+         setLocation={setLocation}
+        />
+      )}
 
       {tab === "requests" && (
         <div className="space-y-3 pb-6">
@@ -752,109 +759,122 @@ function EventRow({ event }: { event: Event }) {
   );
 }
 
-function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: boolean }) {
+function ArtistList({
+  artists,
+  loading,
+  setLocation,
+}: {
+  artists: UserArtist[] | undefined;
+  loading: boolean;
+  setLocation: (to: string) => void;
+}) {
   if (loading) {
     return (
-      <div className="space-y-2">
-        {[1, 2, 3, 4].map((i) => (
+      <div className="space-y-3 pb-6">
+        {Array.from({ length: 4 }).map((_, i) => (
           <div
             key={i}
-            className="animate-pulse rounded-2xl h-14"
-            style={{ background: "var(--surface)", border: "1px solid var(--border-raw)" }}
+            className="h-24 rounded-2xl animate-pulse"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-raw)",
+            }}
           />
         ))}
       </div>
     );
   }
 
-  if (!artists.length) {
+  if (!artists || !artists.length) {
     return (
       <div className="text-center py-16" style={{ color: "var(--muted-color)" }}>
         <Music2 className="w-12 h-12 mx-auto mb-4 opacity-30" />
         <p className="font-semibold text-white mb-1">No artists yet</p>
-        <p className="text-sm">Connect Spotify, Apple Music, or add artists manually in Settings.</p>
+        <p className="text-sm">
+          Connect Spotify, Apple Music, or add artists manually in Settings.
+        </p>
       </div>
     );
   }
 
- return (
-  <div className="space-y-3 pb-6">
-    {[...artists]
-      .sort((a, b) => b.affinityScore - a.affinityScore)
-      .map((artist, i) => (
-        <button
-          key={`${artist.userId}-${artist.spotifyArtistId}`}
-          data-testid={`row-artist-${i}`}
-          type="button"
-          onClick={() =>
-            window.location.href = `/artists/${encodeURIComponent(
-              artist.spotifyArtistId
-            )}?name=${encodeURIComponent(artist.artistName)}`
-          }
-          className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left"
-          style={{
-            background: "var(--surface)",
-            border: "1px solid var(--border-raw)",
-          }}
-        >
-          <span
-            className="text-sm font-bold w-6 text-center shrink-0"
-            style={{ color: "var(--muted-color)" }}
-          >
-            {i + 1}
-          </span>
-
-          {artist.artistImageUrl ? (
-            <img
-              src={artist.artistImageUrl}
-              alt={artist.artistName}
-              className="h-16 w-16 rounded-2xl object-cover shrink-0"
-            />
-          ) : (
-            <div className="h-16 w-16 rounded-2xl bg-muted shrink-0" />
-          )}
-
-          <div
-            className="w-12 h-12 rounded-full flex items-center justify-center text-base font-extrabold text-white shrink-0"
+  return (
+    <div className="space-y-3 pb-6">
+      {[...(artists || [])]
+        .sort((a, b) => b.affinityScore - a.affinityScore)
+        .map((artist, i) => (
+          <button
+            key={`${artist.userId}-${artist.spotifyArtistId}`}
+            data-testid={`row-artist-${i}`}
+            type="button"
+            onClick={() => {
+              setLocation(
+                `/artists/${encodeURIComponent(artist.spotifyArtistId)}?name=${encodeURIComponent(artist.artistName)}`
+              );
+            }}
+            className="w-full flex items-center gap-4 px-4 py-4 rounded-2xl text-left"
             style={{
-              background: "linear-gradient(135deg, var(--purple), #7B3FD8)",
+              background: "var(--surface)",
+              border: "1px solid var(--border-raw)",
             }}
           >
-            {artist.artistName.charAt(0)}
-          </div>
-
-          <div className="flex-1 min-w-0">
-            <p
-              className="font-semibold text-base leading-tight break-words"
-              style={{ color: "var(--silver)" }}
+            <span
+              className="text-sm font-bold w-6 text-center shrink-0"
+              style={{ color: "var(--muted-color)" }}
             >
-              {artist.artistName}
-            </p>
+              {i + 1}
+            </span>
 
-            <div className="flex items-center gap-2 mt-2">
-              <div
-                className="h-2 rounded-full overflow-hidden flex-1 max-w-[120px]"
-                style={{ background: "var(--border-raw)" }}
-              >
-                <div
-                  className="h-full rounded-full"
-                  style={{
-                    width: `${Math.round(artist.affinityScore * 100)}%`,
-                    background: "var(--purple)",
-                  }}
-                />
-              </div>
+            {artist.artistImageUrl ? (
+              <img
+                src={artist.artistImageUrl}
+                alt={artist.artistName}
+                className="h-16 w-16 rounded-2xl object-cover shrink-0"
+              />
+            ) : (
+              <div className="h-16 w-16 rounded-2xl bg-muted shrink-0" />
+            )}
 
-              <span
-                className="text-xs truncate max-w-[120px]"
-                style={{ color: "var(--muted-color)" }}
-              >
-                {artist.source ?? "manual"}
-              </span>
+            <div
+              className="w-12 h-12 rounded-full flex items-center justify-center text-base font-extrabold text-white shrink-0"
+              style={{
+                background: "linear-gradient(135deg, var(--purple), #7B3FD8)",
+              }}
+            >
+              {artist.artistName.charAt(0)}
             </div>
-          </div>
-        </button>
-      ))}
-  </div>
-);
+
+            <div className="flex-1 min-w-0">
+              <p
+                className="font-semibold text-base leading-tight break-words"
+                style={{ color: "var(--silver)" }}
+              >
+                {artist.artistName}
+              </p>
+
+              <div className="flex items-center gap-2 mt-2">
+                <div
+                  className="h-2 rounded-full overflow-hidden flex-1 max-w-[120px]"
+                  style={{ background: "var(--border-raw)" }}
+                >
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.round(artist.affinityScore * 100)}%`,
+                      background: "var(--purple)",
+                    }}
+                  />
+                </div>
+
+                <span
+                  className="text-xs truncate max-w-[120px]"
+                  style={{ color: "var(--muted-color)" }}
+                >
+                  {artist.source ?? "manual"}
+                </span>
+              </div>
+            </div>
+          </button>
+        ))}
+    </div>
+  );
 }
