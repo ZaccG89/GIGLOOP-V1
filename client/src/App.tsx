@@ -37,10 +37,10 @@ function Router() {
       <Route path="/venue/register" component={VenueRegister} />
       <Route path="/profile" component={Profile} />
       <Route path="/users/:id" component={UserProfile} />
-      <Route path="/" component={Home} />
-      <Route path="/search" component={SearchPage} />
-      <Route component={NotFound} />
       <Route path="/artists/:id" component={ArtistsPage} />
+      <Route path="/search" component={SearchPage} />
+      <Route path="/" component={Home} />
+      <Route component={NotFound} />
     </Switch>
   );
 }
