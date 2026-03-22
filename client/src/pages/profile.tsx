@@ -778,47 +778,55 @@ function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: bool
   }
 
   return (
-    <div className="space-y-2 pb-6">
-      {[...artists]
-        .sort((a, b) => b.affinityScore - a.affinityScore)
-        .map((artist, i) => (
-          <div
-            key={`${artist.userId}-${artist.spotifyArtistId}`}
-            data-testid={`row-artist-${i}`}
-            className="flex items-center gap-4 px-4 py-3 rounded-2xl"
-            style={{ background: "var(--surface)", border: "1px solid var(--border-raw)" }}
+  <div className="space-y-3 pb-6">
+    {[...artists]
+      .sort((a, b) => b.affinityScore - a.affinityScore)
+      .map((artist, i) => (
+        <div
+          key={`${artist.userId}-${artist.spotifyArtistId}`}
+          data-testid={`row-artist-${i}`}
+          className="flex items-center gap-4 px-4 py-4 rounded-2xl"
+          style={{
+            background: "var(--surface)",
+            border: "1px solid var(--border-raw)",
+          }}
+        >
+          <span
+            className="text-sm font-bold w-6 text-center shrink-0"
+            style={{ color: "var(--muted-color)" }}
           >
-            <span
-              className="text-sm font-bold w-6 text-center"
-              style={{ color: "var(--muted-color)" }}
-            >
-              {i + 1}
-              {artist.artistImageUrl ? (
-             <img
+            {i + 1}
+          </span>
+
+          {artist.artistImageUrl ? (
+            <img
               src={artist.artistImageUrl}
               alt={artist.artistName}
-              className="h-10 w-10 rounded-full object-cover"
-             />
-            ) : (
-  <div className="h-10 w-10 rounded-full bg-muted" />
-)}
-            </span>
+              className="h-16 w-16 rounded-2xl object-cover shrink-0"
+            />
+          ) : (
+            <div className="h-16 w-16 rounded-2xl bg-muted shrink-0" />
+          )}
 
-            <div
-              className="w-9 h-9 rounded-full flex items-center justify-center text-sm font-extrabold text-white"
-              style={{ background: "linear-gradient(135deg, var(--purple), #7B3FD8)" }}
+          <div
+            className="w-12 h-12 rounded-full flex items-center justify-center text-base font-extrabold text-white shrink-0"
+            style={{ background: "linear-gradient(135deg, var(--purple), #7B3FD8)" }}
+          >
+            {artist.artistName.charAt(0)}
+          </div>
+
+          <div className="flex-1 min-w-0">
+            <p
+              className="font-semibold text-base leading-tight break-words"
+              style={{ color: "var(--silver)" }}
             >
-              {artist.artistName.charAt(0)}
-            </div>
-
-            <p className="flex-1 font-semibold truncate" style={{ color: "var(--silver)" }}>
               {artist.artistName}
             </p>
 
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-2 mt-2">
               <div
-                className="h-1.5 rounded-full overflow-hidden"
-                style={{ width: 60, background: "var(--border-raw)" }}
+                className="h-2 rounded-full overflow-hidden flex-1 max-w-[120px]"
+                style={{ background: "var(--border-raw)" }}
               >
                 <div
                   className="h-full rounded-full"
@@ -828,12 +836,17 @@ function ArtistList({ artists, loading }: { artists: UserArtist[]; loading: bool
                   }}
                 />
               </div>
-              <span className="text-xs" style={{ color: "var(--muted-color)" }}>
+
+              <span
+                className="text-xs truncate max-w-[120px]"
+                style={{ color: "var(--muted-color)" }}
+              >
                 {artist.source ?? "manual"}
               </span>
             </div>
           </div>
-        ))}
-    </div>
-  );
+        </div>
+      ))}
+  </div>
+);
 }
