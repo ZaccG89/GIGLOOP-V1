@@ -284,7 +284,7 @@ export async function registerRoutes(
 
       const passwordHash = await bcrypt.hash(password, 10);
 
-      const user = await storage.createUser({
+      const user: any = await storage.createUser({
         displayName,
         username,
         email: email.toLowerCase(),
@@ -293,6 +293,14 @@ export async function registerRoutes(
         radiusKm: 150,
       } as any);
 
+     const token = await createSession((user as any).id);
+
+res.cookie("gigloop_session", token, {
+  httpOnly: true,
+  sameSite: "lax",
+  secure: process.env.NODE_ENV === "production",
+});
+      
       return res.status(201).json(user);
     } catch (e: any) {
       console.error("Signup error:", e);
