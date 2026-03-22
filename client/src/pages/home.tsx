@@ -3,12 +3,13 @@ import { useAuth } from "@/hooks/use-auth";
 import { useFeed } from "@/hooks/use-feed";
 import { Layout } from "@/components/layout";
 import { Button, Card } from "@/components/ui-elements";
-import { AlertCircle, MapPin } from "lucide-react";
-import { Link } from "wouter";
+import { AlertCircle, MapPin, Search } from "lucide-react";
+import { Link, useLocation } from "wouter";
 import GigCard from "@/components/GigCard";
 import SpotifyConnectCard from "@/components/SpotifyConnectCard";
 
 export default function Home() {
+  const [, setLocation] = useLocation();
   const { data: user, isLoading: userLoading } = useAuth();
   const { data: feed, isLoading: feedLoading, error } = useFeed();
 
@@ -44,16 +45,34 @@ export default function Home() {
 
   return (
     <Layout>
-      <div className="mb-8 flex flex-col items-start">
-       <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-white">
-  Gig
-  <span className="bg-gradient-to-r from-purple-400 to-violet-500 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]">
-    Loop
-  </span>
-</h1>
-  <p className="text-sm text-muted-foreground mt-2 mb-4">
-    Live gigs tailored to your music taste.
-  </p>
+      <div className="mb-8">
+        <div className="flex items-start justify-between gap-3">
+          <div>
+            <h1 className="text-4xl sm:text-5xl font-semibold tracking-tight text-white">
+              Gig
+              <span className="bg-gradient-to-r from-purple-400 to-violet-500 bg-clip-text text-transparent drop-shadow-[0_0_10px_rgba(168,85,247,0.6)]">
+                Loop
+              </span>
+            </h1>
+            <p className="text-sm text-muted-foreground mt-2 mb-4">
+              Live gigs tailored to your music taste.
+            </p>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setLocation("/search")}
+            className="shrink-0 flex items-center gap-2 px-4 py-2 rounded-2xl"
+            style={{
+              background: "var(--surface)",
+              border: "1px solid var(--border-raw)",
+              color: "var(--muted-color)",
+            }}
+          >
+            <Search className="w-4 h-4" />
+            <span className="text-sm font-medium">Search</span>
+          </button>
+        </div>
 
         {showAuthButtons && (
           <div className="flex flex-col sm:flex-row gap-3 mb-6">
@@ -65,8 +84,6 @@ export default function Home() {
           </div>
         )}
 
-      
-        {/* Spotify Connect Card */}
         {user && !isGuest && (
           <div className="mt-6">
             <SpotifyConnectCard />
