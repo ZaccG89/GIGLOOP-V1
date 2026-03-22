@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useLocation } from "wouter";
 import { Layout } from "@/components/layout";
 import { Search, Music2, MapPin, User as UserIcon } from "lucide-react";
@@ -36,6 +36,12 @@ export default function SearchPage() {
     },
     retry: false,
   });
+
+  useEffect(() => {
+  console.log("SEARCH PAGE FEED", feed);
+  console.log("SEARCH PAGE FIRST FEED ITEM", Array.isArray(feed) ? feed[0] : null);
+  console.log("SEARCH PAGE USERS", users);
+}, [feed, users]);
 
   const trimmedQuery = query.trim().toLowerCase();
 
