@@ -60,7 +60,12 @@ export default function SearchPage() {
       }
 
       if (typeof item?.event?.name === "string") {
-        possibleArtists.push(item.event.name);
+        
+        // break event name into searchable words
+      if (typeof item?.event?.name === "string") {
+      const words = item.event.name.split(/[\s&,-]+/);
+      possibleArtists.push(...words);
+       }    
       }
 
       for (const rawArtist of possibleArtists) {
