@@ -25,15 +25,18 @@ export function Layout({ children }: { children: ReactNode }) {
   const isGuest = !!user && !user.email;
 
   const navItems = [
-    { href: "/", icon: Home, label: "Feed" },
-    {
-      href: isGuest ? "/signup" : "/profile",
-      icon: User,
-      label: isGuest ? "Create Profile" : "Profile",
-    },
-    { href: "/venues", icon: MapPin, label: "Venues" },
-    { href: "/settings", icon: Settings, label: "Settings" },
-  ];
+  { href: "/", icon: Home, label: "Feed" },
+
+  ...(isGuest
+    ? [
+        { href: "/login", icon: User, label: "Log In" },
+        { href: "/signup", icon: User, label: "Sign Up" },
+      ]
+    : [{ href: "/profile", icon: User, label: "Profile" }]),
+
+  { href: "/venues", icon: MapPin, label: "Venues" },
+  { href: "/settings", icon: Settings, label: "Settings" },
+];
 
   if (user?.email?.includes("admin")) {
     navItems.push({
