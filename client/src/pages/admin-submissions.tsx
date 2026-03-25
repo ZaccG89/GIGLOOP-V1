@@ -8,6 +8,7 @@ import { ShieldAlert, Check, X, Calendar, MapPin, Building2, Clock, CheckCircle 
 import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Venue } from "@shared/schema";
+import { api } from "@shared/routes";
 
 function usePendingVenues(secret: string) {
   return useQuery<Venue[]>({
@@ -66,12 +67,12 @@ const [venueQuery, setVenueQuery] = useState("");
 const [showVenueResults, setShowVenueResults] = useState(false);
 
 const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venue[]>({
-  queryKey: ["/api/venues/search", venueQuery],
+  queryKey: [api.venues.search.path, venueQuery],
   queryFn: async () => {
     if (!venueQuery.trim()) return [];
 
     const res = await fetch(
-      `/api/venues/search?q=${encodeURIComponent(venueQuery.trim())}`,
+      `${api.venues.search.path}?q=${encodeURIComponent(venueQuery.trim())}`,
       { credentials: "include" }
     );
 
