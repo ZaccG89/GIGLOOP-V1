@@ -162,38 +162,51 @@ const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venu
     placeholder="Search venue name"
   />
 
-  {showVenueResults && venueQuery.trim().length >= 2 && (
-    <div className="absolute z-20 mt-2 w-full rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
-      {venueSearchLoading ? (
-        <div className="px-4 py-3 text-sm text-white/70">Searching venues...</div>
-      ) : venueResults.length === 0 ? (
-        <div className="px-4 py-3 text-sm text-white/70">No venues found</div>
-      ) : (
-        venueResults.slice(0, 8).map((venue) => (
-          <button
-            key={venue.id}
-            type="button"
-            className="w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
-            onClick={() => {
-              setVenueQuery(venue.name);
-              setForm({
-                ...form,
-                venueName: venue.name || "",
-                city: venue.city || "",
-                state: venue.state || "",
-              });
-              setShowVenueResults(false);
-            }}
-          >
-            <div className="font-medium text-white">{venue.name}</div>
-            <div className="text-xs text-white/60">
-              {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
-            </div>
-          </button>
-        ))
-      )}
-    </div>
-  )}
+  {venueQuery.trim().length >= 2 && (
+  <div className="mt-2 rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
+    {venueSearchLoading ? (
+      <div className="px-4 py-3 text-sm text-white/70">Searching venues...</div>
+    ) : venueResults.length === 0 ? (
+      <button
+        type="button"
+        className="w-full px-4 py-3 text-left hover:bg-white/5"
+        onClick={() => {
+          setForm({
+            ...form,
+            venueName: venueQuery,
+          });
+          setShowVenueResults(false);
+        }}
+      >
+        <div className="text-white font-medium">Use "{venueQuery}"</div>
+        <div className="text-xs text-white/60">Create new venue</div>
+      </button>
+    ) : (
+      venueResults.slice(0, 8).map((venue) => (
+        <button
+          key={venue.id}
+          type="button"
+          className="block w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
+          onClick={() => {
+            setVenueQuery(venue.name);
+            setForm({
+              ...form,
+              venueName: venue.name || "",
+              city: venue.city || "",
+              state: venue.state || "",
+            });
+            setShowVenueResults(false);
+          }}
+        >
+          <div className="font-medium text-white">{venue.name}</div>
+          <div className="text-xs text-white/60">
+            {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
+          </div>
+        </button>
+      ))
+    )}
+  </div>
+)}
 </div>
             <Button type="submit" className="w-full">Authenticate</Button>
             {isError && <p className="text-destructive text-sm text-center">Invalid secret. Try again.</p>}
