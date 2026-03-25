@@ -52,6 +52,16 @@ export default function AdminSubmissions() {
   const [activeSecret, setActiveSecret] = useState("");
   const [tab, setTab] = useState<"gigs" | "venues">("gigs");
 
+  const [form, setForm] = useState({
+  name: "",
+  startTime: "",
+  venueName: "",
+  ticketUrl: "",
+  imageUrl: "",
+  city: "",
+  state: "",
+});
+
   const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
   const approve = useApproveSubmission(activeSecret);
   const reject = useRejectSubmission(activeSecret);
@@ -59,6 +69,39 @@ export default function AdminSubmissions() {
   const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues(activeSecret);
   const approveVenue = useApproveVenue(activeSecret);
   const rejectVenue = useRejectVenue(activeSecret);
+  
+  const createEvent = useMutation({
+  mutationFn: async () => {
+    const res = await fetch("/api/admin/events/create", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(form),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to create event");
+    }
+
+    return data;
+  },
+  onSuccess: () => {
+    setForm({
+      name: "",
+      startTime: "",
+      venueName: "",
+      ticketUrl: "",
+      imageUrl: "",
+      city: "",
+      state: "",
+    });
+    alert("Event created");
+  },
+});
 
   useEffect(() => {
     if (!userLoading && (!user || !user.email?.includes("admin"))) {
@@ -103,6 +146,91 @@ export default function AdminSubmissions() {
       ) : (
         <>
           {/* Tabs */}
+          <Card className="p-6 mb-6 border-primary/20">
+  <div className="space-y-4">
+    <div>
+      <h2 className="text-xl font-bold text-white">Create Event</h2>
+      <p className="text-sm text-muted-foreground">
+        Add gigs directly into GigLoop for manual seeding.
+      </p>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Event Name</label>
+        <Input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Band / Event name"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Start Time</label>
+        <Input
+          type="datetime-local"
+          value={form.startTime}
+          onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
+        <Input
+          value={form.venueName}
+          onChange={(e) => setForm({ ...form, venueName: e.target.value })}
+          placeholder="Venue name"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Ticket URL</label>
+        <Input
+          value={form.ticketUrl}
+          onChange={(e) => setForm({ ...form, ticketUrl: e.target.value })}
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Image URL</label>
+        <Input
+          value={form.imageUrl}
+          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">City</label>
+        <Input
+          value={form.city}
+          onChange={(e) => setForm({ ...form, city: e.target.value })}
+          placeholder="Brisbane"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">State</label>
+        <Input
+          value={form.state}
+          onChange={(e) => setForm({ ...form, state: e.target.value })}
+          placeholder="QLD"
+        />
+      </div>
+    </div>
+
+    <div className="pt-2">
+      <Button
+        onClick={() => createEvent.mutate()}
+        disabled={createEvent.isPending || !form.name || !form.startTime || !form.venueName}
+        className="w-full md:w-auto"
+      >
+        {createEvent.isPending ? "Creating..." : "Create Event"}
+      </Button>
+    </div>
+  </div>
+</Card>
           <div className="flex gap-2 mb-6">
             <button
               onClick={() => setTab("gigs")}
@@ -131,7 +259,7 @@ export default function AdminSubmissions() {
               )}
             </button>
             <div className="ml-auto">
-              <Button variant="outline" size="sm" onClick={() => setActiveSecret("")}>Lock Panel</Button>
+              <Button variant="outline" onClick={() => setActiveSecret("")}> </Button>
             </div>
           </div>
 
