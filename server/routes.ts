@@ -1174,6 +1174,25 @@ res.cookie("gigloop_session", token, {
       throw err;
     }
   });
+  
+  app.get("/api/users/search", requireAuth, async (req: any, res: Response) => {
+  const query = String(req.query.q ?? "").trim();
+
+  if (!query) {
+    return res.json([]);
+  }
+
+  const users = await storage.searchUsers(query);
+
+  return res.json(
+    users.map((user) => ({
+      id: user.id,
+      displayName: user.displayName,
+      username: (user as any).username,
+      avatarUrl: (user as any).avatarUrl,
+    }))
+  );
+});
 
   app.get("/api/users/:id", requireAuth, async (req: any, res: Response) => {
     const profileId = getParam(req.params.id);

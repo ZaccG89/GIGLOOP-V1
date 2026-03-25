@@ -130,6 +130,7 @@ export interface IStorage {
     }
   ): Promise<User>;
   getUserPublicProfile(userId: string): Promise<User | undefined>;
+  searchUsers(query: string): Promise<User[]>;
 
   // Follows
   sendFollowRequest(followerId: string, followingId: string): Promise<Follow>;
@@ -721,7 +722,19 @@ export class DatabaseStorage implements IStorage {
     const [user] = await db.select().from(users).where(eq(users.id, userId));
     return user;
   }
-
+  
+  async searchUsers(query: string): Promise<User[]> {
+  return db
+    .select()
+    .from(users)
+    .where(
+      or(
+        ilike(users.displayName, `%${query}%`),
+        ilike(users.username, `%${query}%`)
+      )
+    )
+    .limit(10);
+}
   async sendFollowRequest(
     followerId: string,
     followingId: string
