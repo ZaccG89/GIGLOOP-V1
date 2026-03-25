@@ -28,7 +28,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const { data: feed = [], isLoading: feedLoading } = useFeed();
-  console.log(feed);
+  
 
   const { data: users = [], isLoading: usersLoading } = useQuery<UserResult[]>({
     queryKey: ["/api/users/search", trimmedQuery],
@@ -48,9 +48,7 @@ export default function SearchPage() {
   });
 
   useEffect(() => {
-  console.log("SEARCH PAGE FEED", feed);
-  console.log("SEARCH PAGE FIRST FEED ITEM", Array.isArray(feed) ? feed[0] : null);
-  console.log("SEARCH PAGE USERS", users);
+  
 }, [feed, users]);
 
   const artistResults = useMemo<ArtistResult[]>(() => {
@@ -61,31 +59,18 @@ export default function SearchPage() {
   for (const rawItem of Array.isArray(feed) ? feed : []) {
     const item = rawItem as any;
 
-    const possibleArtists: string[] = [];
+    const artistName =
+      typeof item?.name === "string" ? item.name.trim() : "";
 
-    // ✅ primary source
-    if (Array.isArray(item?.matchedArtists) && item.matchedArtists.length > 0) {
-      possibleArtists.push(...item.matchedArtists);
-    }
-    // ✅ fallback (event title = artist)
-    else if (typeof item?.event?.name === "string") {
-      possibleArtists.push(item.event.name.trim());
-    }
+    if (!artistName) continue;
 
-    for (const rawArtist of possibleArtists) {
-      const artistName =
-        typeof rawArtist === "string" ? rawArtist.trim() : "";
+    const key = artistName.toLowerCase();
+    const existing = artistMap.get(key);
 
-      if (!artistName) continue;
-
-      const key = artistName.toLowerCase();
-      const existing = artistMap.get(key);
-
-      if (existing) {
-        existing.count += 1;
-      } else {
-        artistMap.set(key, { name: artistName, count: 1 });
-      }
+    if (existing) {
+      existing.count += 1;
+    } else {
+      artistMap.set(key, { name: artistName, count: 1 });
     }
   }
 
@@ -97,54 +82,43 @@ export default function SearchPage() {
     .slice(0, 8);
 }, [feed, trimmedQuery]);
 
-  const venueResults = useMemo<VenueResult[]>(() => {
-    if (!trimmedQuery) return [];
+const venueResults = useMemo<VenueResult[]>(() => {
+  if (!trimmedQuery) return [];
 
-    const venueMap = new Map<string, VenueResult>();
+  const venueMap = new Map<string, VenueResult>();
 
-    for (const rawItem of Array.isArray(feed) ? feed : []) {
-      const item = rawItem as any;
-      const event = item?.event;
+  for (const rawItem of Array.isArray(feed) ? feed : []) {
+    const item = rawItem as any;
 
-      if (!event || typeof event !== "object") continue;
+    const venueName =
+      typeof item?.venueName === "string" ? item.venueName.trim() : "";
 
-      const venueName =
-        typeof event.venueName === "string"
-          ? event.venueName.trim()
-          : typeof event.venue?.name === "string"
-            ? event.venue.name.trim()
-            : typeof event.venue === "string"
-              ? event.venue.trim()
-              : "";
+    if (!venueName) continue;
 
-      if (!venueName) continue;
+    const venueId =
+      item?.venueId != null ? String(item.venueId) : venueName;
 
-      const venueId =
-        event.venueId != null
-          ? String(event.venueId)
-          : event.venue?.id != null
-            ? String(event.venue.id)
-            : venueName;
+    const key = venueName.toLowerCase();
+    const existing = venueMap.get(key);
 
-      const key = venueName.toLowerCase();
-      const existing = venueMap.get(key);
-
-      if (existing) {
-        existing.count += 1;
-      } else {
-        venueMap.set(key, {
-          id: venueId,
-          name: venueName,
-          count: 1,
-        });
-      }
+    if (existing) {
+      existing.count += 1;
+    } else {
+      venueMap.set(key, {
+        id: venueId,
+        name: venueName,
+        count: 1,
+      });
     }
+  }
 
-    return Array.from(venueMap.values())
-      .filter((venue) => venue.name.toLowerCase().includes(trimmedQuery))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 8);
-  }, [feed, trimmedQuery]);
+  return Array.from(venueMap.values())
+    .filter((venue) =>
+      venue.name.toLowerCase().includes(trimmedQuery.toLowerCase())
+    )
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 8);
+}, [feed, trimmedQuery]);
 
   const userResults = useMemo<UserResult[]>(() => {
     if (!trimmedQuery) return [];
