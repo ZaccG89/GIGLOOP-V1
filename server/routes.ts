@@ -1018,7 +1018,13 @@ res.cookie("gigloop_session", token, {
   try {
     const user = await storage.getUser(req.userId);
 
-    if ((user as any)?.role !== "admin") {
+    if (
+  (user as any)?.role !== "admin" &&
+  !(user as any)?.email?.includes("admin") &&
+  (user as any)?.username !== "Admin"
+) {
+  return res.status(403).json({ message: "Admin only" });
+}if ((user as any)?.role !== "admin") {
       return res.status(403).json({ message: "Admin only" });
     }
 
