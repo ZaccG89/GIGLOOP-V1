@@ -47,10 +47,6 @@ export default function SearchPage() {
     retry: false,
   });
 
-  useEffect(() => {
-  
-}, [feed, users]);
-
   const artistResults = useMemo<ArtistResult[]>(() => {
   if (!trimmedQuery) return [];
 
