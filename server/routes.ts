@@ -1023,9 +1023,7 @@ res.cookie("gigloop_session", token, {
   !(user as any)?.email?.includes("admin") &&
   (user as any)?.username !== "Admin"
 ) {
-  return res.status(403).json({ message: "Admin only" });
-}if ((user as any)?.role !== "admin") {
-      return res.status(403).json({ message: "Admin only" });
+       return res.status(403).json({ message: "Admin only" });
     }
 
     const {
