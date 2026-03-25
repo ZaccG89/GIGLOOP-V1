@@ -126,7 +126,7 @@ export default function AdminSubmissions() {
         <p className="text-muted-foreground">Review gig submissions and venue verification requests.</p>
       </div>
 
-      {!activeSecret || isError ? (
+      {false ? (
         <Card className="p-8 max-w-md mx-auto mt-12 border-primary/20">
           <form onSubmit={handleSecretSubmit} className="space-y-4">
             <div>
@@ -259,7 +259,7 @@ export default function AdminSubmissions() {
               )}
             </button>
             <div className="ml-auto">
-              <Button variant="outline" onClick={() => setActiveSecret("")}> </Button>
+              
             </div>
           </div>
 
