@@ -67,12 +67,12 @@ const [venueQuery, setVenueQuery] = useState("");
 const [showVenueResults, setShowVenueResults] = useState(false);
 
 const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venue[]>({
-  queryKey: [api.venues.search.path, venueQuery],
+  queryKey: ["/api/venues", venueQuery],
   queryFn: async () => {
     if (!venueQuery.trim()) return [];
 
     const res = await fetch(
-      `${api.venues.search.path}?q=${encodeURIComponent(venueQuery.trim())}`,
+      `/api/venues?q=${encodeURIComponent(venueQuery.trim())}`,
       { credentials: "include" }
     );
 
