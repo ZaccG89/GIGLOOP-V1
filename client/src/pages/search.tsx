@@ -28,6 +28,7 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const { data: feed = [], isLoading: feedLoading } = useFeed();
+  console.log(feed);
 
   const { data: users = [], isLoading: usersLoading } = useQuery<UserResult[]>({
     queryKey: ["/api/users/search", trimmedQuery],
