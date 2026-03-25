@@ -60,9 +60,16 @@ export default function SearchPage() {
   for (const rawItem of Array.isArray(feed) ? feed : []) {
     const item = rawItem as any;
 
-    const possibleArtists: string[] = Array.isArray(item?.matchedArtists)
-      ? item.matchedArtists
-      : [];
+    const possibleArtists: string[] = [];
+
+    // ✅ primary source
+    if (Array.isArray(item?.matchedArtists) && item.matchedArtists.length > 0) {
+      possibleArtists.push(...item.matchedArtists);
+    }
+    // ✅ fallback (event title = artist)
+    else if (typeof item?.event?.name === "string") {
+      possibleArtists.push(item.event.name.trim());
+    }
 
     for (const rawArtist of possibleArtists) {
       const artistName =
@@ -82,7 +89,9 @@ export default function SearchPage() {
   }
 
   return Array.from(artistMap.values())
-    .filter((artist) => artist.name.toLowerCase().includes(trimmedQuery.toLowerCase()))
+    .filter((artist) =>
+      artist.name.toLowerCase().includes(trimmedQuery.toLowerCase())
+    )
     .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
     .slice(0, 8);
 }, [feed, trimmedQuery]);
