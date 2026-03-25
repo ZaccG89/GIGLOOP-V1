@@ -64,23 +64,40 @@ export default function AdminSubmissions() {
 });
 
 const [venueQuery, setVenueQuery] = useState("");
-const [showVenueResults, setShowVenueResults] = useState(false);
+const [venueResults, setVenueResults] = useState<Venue[]>([]);
+const [venueSearchLoading, setVenueSearchLoading] = useState(false);
 
-const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venue[]>({
-  queryKey: ["/api/venues", venueQuery],
-  queryFn: async () => {
-    if (!venueQuery.trim()) return [];
+useEffect(() => {
+  const runVenueSearch = async () => {
+    if (venueQuery.trim().length < 2) {
+      setVenueResults([]);
+      return;
+    }
 
-    const res = await fetch(
-      `/api/venues?q=${encodeURIComponent(venueQuery.trim())}`,
-      { credentials: "include" }
-    );
+    try {
+      setVenueSearchLoading(true);
 
-    if (!res.ok) throw new Error("Failed to search venues");
-    return res.json();
-  },
-  enabled: venueQuery.trim().length >= 2,
-});
+      const res = await fetch(
+        `/api/venues?q=${encodeURIComponent(venueQuery.trim())}`,
+        { credentials: "include" }
+      );
+
+      if (!res.ok) {
+        setVenueResults([]);
+        return;
+      }
+
+      const data = await res.json();
+      setVenueResults(Array.isArray(data) ? data : []);
+    } catch {
+      setVenueResults([]);
+    } finally {
+      setVenueSearchLoading(false);
+    }
+  };
+
+  runVenueSearch();
+}, [venueQuery]);
 
   const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
   const approve = useApproveSubmission(activeSecret);
@@ -157,8 +174,7 @@ const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venu
       const value = e.target.value;
       setVenueQuery(value);
       setForm({ ...form, venueName: value });
-      setShowVenueResults(true);
-    }}
+         }}
     placeholder="Search venue name"
   />
 
@@ -175,7 +191,6 @@ const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venu
             ...form,
             venueName: venueQuery,
           });
-          setShowVenueResults(false);
         }}
       >
         <div className="text-white font-medium">Use "{venueQuery}"</div>
@@ -195,7 +210,7 @@ const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venu
               city: venue.city || "",
               state: venue.state || "",
             });
-            setShowVenueResults(false);
+            
           }}
         >
           <div className="font-medium text-white">{venue.name}</div>
