@@ -52,53 +52,40 @@ export default function SearchPage() {
   console.log("SEARCH PAGE USERS", users);
 }, [feed, users]);
 
-  const trimmedQuery = query.trim().toLowerCase();
-
   const artistResults = useMemo<ArtistResult[]>(() => {
-    if (!trimmedQuery) return [];
+  if (!trimmedQuery) return [];
 
-    const artistMap = new Map<string, ArtistResult>();
+  const artistMap = new Map<string, ArtistResult>();
 
-    for (const rawItem of Array.isArray(feed) ? feed : []) {
-      const item = rawItem as any;
+  for (const rawItem of Array.isArray(feed) ? feed : []) {
+    const item = rawItem as any;
 
-      const possibleArtists: string[] = [];
+    const possibleArtists: string[] = Array.isArray(item?.matchedArtists)
+      ? item.matchedArtists
+      : [];
 
-      if (Array.isArray(item?.matchedArtists)) {
-        possibleArtists.push(...item.matchedArtists);
-      }
+    for (const rawArtist of possibleArtists) {
+      const artistName =
+        typeof rawArtist === "string" ? rawArtist.trim() : "";
 
-      if (typeof item?.event?.name === "string") {
-        
-        // break event name into searchable words
-      if (typeof item?.event?.name === "string") {
-      const words = item.event.name.split(/[\s&,-]+/);
-      possibleArtists.push(...words);
-       }    
-      }
+      if (!artistName) continue;
 
-      for (const rawArtist of possibleArtists) {
-        const artistName =
-          typeof rawArtist === "string" ? rawArtist.trim() : "";
+      const key = artistName.toLowerCase();
+      const existing = artistMap.get(key);
 
-        if (!artistName) continue;
-
-        const key = artistName.toLowerCase();
-        const existing = artistMap.get(key);
-
-        if (existing) {
-          existing.count += 1;
-        } else {
-          artistMap.set(key, { name: artistName, count: 1 });
-        }
+      if (existing) {
+        existing.count += 1;
+      } else {
+        artistMap.set(key, { name: artistName, count: 1 });
       }
     }
+  }
 
-    return Array.from(artistMap.values())
-      .filter((artist) => artist.name.toLowerCase().includes(trimmedQuery))
-      .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
-      .slice(0, 8);
-  }, [feed, trimmedQuery]);
+  return Array.from(artistMap.values())
+    .filter((artist) => artist.name.toLowerCase().includes(trimmedQuery.toLowerCase()))
+    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+    .slice(0, 8);
+}, [feed, trimmedQuery]);
 
   const venueResults = useMemo<VenueResult[]>(() => {
     if (!trimmedQuery) return [];
