@@ -22,18 +22,27 @@ type UserResult = {
   displayName?: string;
 };
 
+
 export default function SearchPage() {
   const [, setLocation] = useLocation();
   const [query, setQuery] = useState("");
+  const trimmedQuery = query.trim();
   const { data: feed = [], isLoading: feedLoading } = useFeed();
 
   const { data: users = [], isLoading: usersLoading } = useQuery<UserResult[]>({
-    queryKey: ["/api/users/search"],
+    queryKey: ["/api/users/search", trimmedQuery],
     queryFn: async () => {
-      const res = await fetch("/api/users/search", { credentials: "include" });
+      if (!trimmedQuery) return [];
+
+      const res = await fetch(
+        `/api/users/search?q=${encodeURIComponent(trimmedQuery)}`,
+        { credentials: "include" }
+      );
+
       if (!res.ok) return [];
-      return res.json();
+      return (await res.json()) as UserResult[];
     },
+    enabled: !!trimmedQuery,
     retry: false,
   });
 
