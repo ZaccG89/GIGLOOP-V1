@@ -1017,6 +1017,47 @@ res.cookie("gigloop_session", token, {
     next();
   };
 
+  app.post("/api/admin/events/create", requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await storage.getUser(req.userId);
+
+    if ((user as any)?.role !== "admin") {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const {
+      name,
+      startTime,
+      venueName,
+      ticketUrl,
+      imageUrl,
+      city,
+      state,
+    } = req.body;
+
+    if (!name || !startTime || !venueName) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const event = await storage.createEvent({
+      provider: "manual",
+      providerEventId: `manual-${Date.now()}`,
+      name,
+      startTime: new Date(startTime),
+      venueName,
+      ticketUrl,
+      imageUrl,
+      city,
+      state,
+    });
+
+    return res.status(201).json(event);
+  } catch (err) {
+    console.error("ADMIN CREATE EVENT ERROR:", err);
+    return res.status(500).json({ message: "Failed to create event" });
+  }
+});
+
   app.get(api.admin.submissions.path, requireAdmin, async (_req: Request, res: Response) => {
     const submissions = await storage.getPendingGigSubmissions();
     return res.json(submissions);
