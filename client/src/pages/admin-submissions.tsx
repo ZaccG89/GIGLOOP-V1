@@ -62,6 +62,25 @@ export default function AdminSubmissions() {
   state: "",
 });
 
+const [venueQuery, setVenueQuery] = useState("");
+const [showVenueResults, setShowVenueResults] = useState(false);
+
+const { data: venueResults = [], isLoading: venueSearchLoading } = useQuery<Venue[]>({
+  queryKey: ["/api/venues/search", venueQuery],
+  queryFn: async () => {
+    if (!venueQuery.trim()) return [];
+
+    const res = await fetch(
+      `/api/venues/search?q=${encodeURIComponent(venueQuery.trim())}`,
+      { credentials: "include" }
+    );
+
+    if (!res.ok) throw new Error("Failed to search venues");
+    return res.json();
+  },
+  enabled: venueQuery.trim().length >= 2,
+});
+
   const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
   const approve = useApproveSubmission(activeSecret);
   const reject = useRejectSubmission(activeSecret);
@@ -129,16 +148,52 @@ export default function AdminSubmissions() {
       {false ? (
         <Card className="p-8 max-w-md mx-auto mt-12 border-primary/20">
           <form onSubmit={handleSecretSubmit} className="space-y-4">
-            <div>
-              <label className="block text-sm font-bold text-white mb-2">Enter Admin Secret</label>
-              <Input
-                type="password"
-                required
-                value={secret}
-                onChange={e => setSecret(e.target.value)}
-                placeholder="••••••••"
-              />
+            <div className="relative">
+  <label className="block text-sm font-bold text-white mb-2">Venue Search</label>
+  <Input
+    value={venueQuery}
+    onChange={(e) => {
+      const value = e.target.value;
+      setVenueQuery(value);
+      setForm({ ...form, venueName: value });
+      setShowVenueResults(true);
+    }}
+    placeholder="Search venue name"
+  />
+
+  {showVenueResults && venueQuery.trim().length >= 2 && (
+    <div className="absolute z-20 mt-2 w-full rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
+      {venueSearchLoading ? (
+        <div className="px-4 py-3 text-sm text-white/70">Searching venues...</div>
+      ) : venueResults.length === 0 ? (
+        <div className="px-4 py-3 text-sm text-white/70">No venues found</div>
+      ) : (
+        venueResults.slice(0, 8).map((venue) => (
+          <button
+            key={venue.id}
+            type="button"
+            className="w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
+            onClick={() => {
+              setVenueQuery(venue.name);
+              setForm({
+                ...form,
+                venueName: venue.name || "",
+                city: venue.city || "",
+                state: venue.state || "",
+              });
+              setShowVenueResults(false);
+            }}
+          >
+            <div className="font-medium text-white">{venue.name}</div>
+            <div className="text-xs text-white/60">
+              {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
             </div>
+          </button>
+        ))
+      )}
+    </div>
+  )}
+</div>
             <Button type="submit" className="w-full">Authenticate</Button>
             {isError && <p className="text-destructive text-sm text-center">Invalid secret. Try again.</p>}
           </form>
