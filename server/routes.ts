@@ -143,8 +143,8 @@ export async function registerRoutes(
 
     for (const event of mappedEvents) {
       const exists = await storage.getEventByExternalId?.(
-        event.externalId,
-        "ticketmaster"
+       event.providerEventId,
+       "ticketmaster"
       );
 
       if (!exists) {

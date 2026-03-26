@@ -107,7 +107,9 @@ useEffect(() => {
   const approveVenue = useApproveVenue(activeSecret);
   const rejectVenue = useRejectVenue(activeSecret);
   
-  const createEvent = useMutation({
+  const queryClient = useQueryClient();
+
+const createEvent = useMutation({
   mutationFn: async () => {
     const res = await fetch("/api/admin/events/create", {
       method: "POST",
@@ -126,7 +128,7 @@ useEffect(() => {
 
     return data;
   },
-  onSuccess: () => {
+  onSuccess: async () => {
     setForm({
       name: "",
       startTime: "",
@@ -136,6 +138,10 @@ useEffect(() => {
       city: "",
       state: "",
     });
+
+    // 🔥 THIS IS THE FIX
+    await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
+
     alert("Event created");
   },
 });

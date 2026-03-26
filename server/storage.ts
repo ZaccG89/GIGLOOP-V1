@@ -93,6 +93,7 @@ export interface IStorage {
   upsertEvent(event: InsertEvent): Promise<Event>;
   getEventArtists(providerEventId: string): Promise<EventArtist[]>;
   upsertEventArtists(artists: InsertEventArtist[]): Promise<void>;
+  deleteEvent(eventId: string): Promise<void>;
 
   // Gig Submissions
   createGigSubmission(submission: InsertGigSubmission): Promise<GigSubmission>;
@@ -464,9 +465,13 @@ export class DatabaseStorage implements IStorage {
   }
 
   async createEvent(event: InsertEvent): Promise<Event> {
-    const [created] = await db.insert(events).values(event).returning();
-    return created;
-  }
+  const [created] = await db.insert(events).values(event).returning();
+  return created;
+}
+
+async deleteEvent(eventId: string): Promise<void> {
+  await db.delete(events).where(eq(events.id, eventId));
+}
 
   async upsertEvent(event: InsertEvent): Promise<Event> {
     const [upserted] = await db
