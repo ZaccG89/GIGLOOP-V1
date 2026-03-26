@@ -302,158 +302,129 @@ export default function EventDetail() {
 
   return (
     <>
-      <div style={{ padding: 24, maxWidth: 900, margin: "0 auto" }}>
-        <Link href="/">← Back</Link>
-{imageUrl && (
-  <img
-    src={imageUrl}
-    alt={title}
-    style={{ width: "100%", borderRadius: 12, marginBottom: 16 }}
-  />
-)}
+  <div className="max-w-[900px] mx-auto p-4">
 
-<h1 style={{ fontSize: 28, fontWeight: 700, color: "white" }}>
-  {title}
-</h1>
+    <Link href="/" className="text-white/60 mb-3 block">
+      ← Back
+    </Link>
 
-<p style={{ color: "#aaa", marginTop: 6 }}>
-  {startTime ? new Date(startTime).toLocaleString() : "Date TBC"}
-</p>
+    {/* IMAGE */}
+    <div className="relative h-[240px] w-full overflow-hidden rounded-2xl">
+      <img
+        src={imageUrl || "/placeholder.jpg"}
+        className="w-full h-full object-cover"
+      />
 
-<Link href={`/venues/${encodeURIComponent(venueName || "")}`}>
-  <p style={{ color: "#ccc", cursor: "pointer", marginTop: 4 }}>
-    {venueName || "Unknown venue"}
-    {city ? ` • ${city}` : ""}
-    {state ? `, ${state}` : ""}
-  </p>
-</Link>
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
-{event?.genre && (
-  <p style={{ color: "#888", marginTop: 4 }}>
-    {event.genre}
-  </p>
-)}
-
-{event?.description && (
-  <div style={{ marginTop: 16 }}>
-    <h3 style={{ color: "white" }}>About</h3>
-    <p style={{ color: "#bbb", lineHeight: 1.6 }}>
-      {event.description}
-    </p>
-  </div>
-)}
-
-{event?.venueAddress && (
-  <div style={{ marginTop: 12 }}>
-    <h3 style={{ color: "white" }}>Venue</h3>
-    <p style={{ color: "#bbb" }}>
-      {event.venueAddress}
-    </p>
-  </div>
-)}
-
-<div style={{ marginTop: 20, display: "flex", gap: 20 }}>
-  <div style={{ color: "white" }}>
- 
-  </div>
-  <div style={{ color: "white" }}>
+      {(venueName || city) && (
+        <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+          {[venueName, city].filter(Boolean).join(" • ")}
+        </div>
+      )}
     </div>
-  <div style={{ color: "white" }}>
-    </div>
-</div>
 
+    {/* CONTENT */}
+    <div className="mt-4 space-y-2">
 
-        <h1 style={{ marginTop: 20 }}>{title}</h1>
+      <h1 className="text-xl font-bold text-white">
+        {title}
+      </h1>
 
-        <p style={{ opacity: 0.7, marginTop: 6 }}>
-          {attendanceData?.count ?? 0} people going
+      <p className="text-white/70">
+        {venueName}
+      </p>
+
+      <p className="text-white/50 text-sm">
+        {fmtDateTime(startTime)}
+      </p>
+
+      <p className="text-white/50 text-sm">
+        {attendanceData?.count ?? 0} people going
+      </p>
+
+      {/* SOUND CHECK BOX */}
+      <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.25)]">
+        <p className="text-xs text-purple-300 uppercase">
+          Be the first to soundcheck
         </p>
 
-        <div style={{ marginTop: 20, display: "flex", gap: 16 }}>
-          <button onClick={handleLike} className="g-icon-btn">
-            <Heart />
-            {counts.likes ?? 0}
-          </button>
+        <p className="text-lg font-semibold text-white">
+          {counts.soundchecks ?? 0} soundchecks
+        </p>
 
-          <button onClick={handleSoundcheck} className="g-icon-btn">
-            <SoundcheckIcon />
-            {counts.soundchecks ?? 0}
-          </button>
+        <p className="text-xs text-white/50">
+          Tap soundcheck if you're going
+        </p>
+      </div>
 
-          <button onClick={handleShare} className="g-icon-btn">
-            <Share2 />
-            {counts.shares ?? 0}
+      {/* ACTIONS */}
+      <div className="mt-3 space-y-2">
+
+        <button
+          onClick={handleSoundcheck}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+        >
+          🎧 Soundcheck
+        </button>
+
+        <div className="flex gap-2">
+
+          <button
+            onClick={handleLike}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            ❤️ {counts.likes ?? 0}
           </button>
 
           <button
-  onClick={handleGoing}
-  className="g-icon-btn"
-  disabled={attendanceMutation.isPending}
-  type="button"
-  style={{
-    color: goingData?.going ? "var(--purple)" : undefined,
-    border: goingData?.going
-      ? "1px solid rgba(155,92,255,0.7)"
-      : undefined,
-    background: goingData?.going ? "rgba(155,92,255,0.14)" : undefined,
-    boxShadow: goingData?.going
-      ? "0 0 12px rgba(155,92,255,0.35)"
-      : undefined,
-  }}
->
-  <Users className="w-5 h-5" />
-  {attendanceData?.count ?? 0}
-</button>
-
-          {(venueName || city || state) && (
-            <a
-              href={`https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(
-                [venueName, city, state].filter(Boolean).join(", ")
-              )}`}
-              target="_blank"
-              rel="noreferrer"
-            >
-              <button className="g-icon-btn">
-                <MapPin />
-              </button>
-            </a>
-            
-          )}
-        </div>
-        <button
-          onClick={handleDelete}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
->
-          Delete Event
+            onClick={handleShare}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            🔗 {counts.shares ?? 0}
           </button>
 
-        <div style={{ marginTop: 24 }}>
-          {ticketUrl ? (
-            <a href={ticketUrl} target="_blank" rel="noopener noreferrer">
-              <button className="g-btn-primary w-full">
-                <Ticket className="w-4 h-4 inline mr-2" />
-                Buy Tickets
-              </button>
-            </a>
-          ) : (
-            <div
-              style={{
-                borderRadius: 16,
-                padding: "14px 0",
-                textAlign: "center",
-                background: "rgba(255,255,255,0.04)",
-              }}
-            >
-              No Tickets Listed
-            </div>
-          )}
+          <button
+            onClick={handleGoing}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            👥 {attendanceData?.count ?? 0}
+          </button>
+
         </div>
       </div>
 
-      <LockedFeatureModal
-        open={guestLockOpen}
-        onOpenChange={setGuestLockOpen}
-      />
-    </>
+      {/* ADMIN DELETE */}
+      <button
+        onClick={handleDelete}
+        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
+      >
+        Delete Event
+      </button>
+
+      {/* TICKETS */}
+      <div className="mt-4">
+        {ticketUrl ? (
+          <button
+            onClick={() => window.open(ticketUrl, "_blank")}
+            className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+          >
+            🎟 Get Tickets
+          </button>
+        ) : (
+          <div className="w-full py-3 rounded-xl border border-white/10 text-center text-white/40">
+            No Tickets Listed
+          </div>
+        )}
+      </div>
+
+    </div>
+  </div>
+
+  <LockedFeatureModal
+    open={guestLockOpen}
+    onOpenChange={setGuestLockOpen}
+  />
+</>
   );
 }
