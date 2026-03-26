@@ -474,191 +474,146 @@ res.cookie("gigloop_session", token, {
     }
   );
 
-  app.get(
-    "/api/auth/spotify/callback",
-    async (req: Request, res: Response) => {
-      const { code, state, error } = req.query;
-      const storedState = (req as any).cookies?.spotify_oauth_state;
+  app.get("/api/auth/spotify/callback", async (req: Request, res: Response) => {
+  const code = req.query.code as string;
 
-      console.log("Spotify callback query:", req.query);
-      console.log("Spotify stored state cookie:", storedState);
-      console.log("Spotify incoming state:", state);
-      console.log("Spotify incoming error:", error);
+  if (!code) {
+    return res.redirect("/settings?error=spotify_auth_failed");
+  }
 
-      if (error || !state || state !== storedState) {
-        console.log("Spotify auth failed before token exchange");
-        return res.redirect("/spotify-connect?error=spotify_auth_failed");
+  const clientId = process.env.SPOTIFY_CLIENT_ID!;
+  const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
+  const redirectUri = process.env.SPOTIFY_REDIRECT_URI!;
+
+  try {
+    // 🔹 TOKEN EXCHANGE
+    const tokenRes = await fetch("https://accounts.spotify.com/api/token", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+        Authorization:
+          "Basic " +
+          Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
+      },
+      body: new URLSearchParams({
+        grant_type: "authorization_code",
+        code,
+        redirect_uri: redirectUri,
+      }),
+    });
+
+    const tokenData: any = await tokenRes.json();
+
+    if (!tokenData.access_token) {
+      console.error("Spotify token failed:", tokenData);
+      return res.redirect("/settings?error=spotify_token_failed");
+    }
+
+    // 🔹 PROFILE
+    const profileRes = await fetch("https://api.spotify.com/v1/me", {
+      headers: {
+        Authorization: `Bearer ${tokenData.access_token}`,
+      },
+    });
+
+    const profile = await profileRes.json();
+
+    if (!profile?.id) {
+      return res.redirect("/settings?error=spotify_profile_failed");
+    }
+
+    // 🔹 USER RESOLUTION
+    const currentUserId = await getOptionalUserId(req);
+    let user;
+
+    if (currentUserId) {
+      user = await storage.getUser(currentUserId);
+    } else {
+      user = await storage.getUserBySpotifyId(profile.id);
+
+      if (!user && profile.email) {
+        user = await storage.getUserByEmail(profile.email.toLowerCase());
       }
 
-      res.clearCookie("spotify_oauth_state");
-
-      const clientId = process.env.SPOTIFY_CLIENT_ID;
-      const clientSecret = process.env.SPOTIFY_CLIENT_SECRET;
-      const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
-
-      if (!clientId || !clientSecret || !redirectUri) {
-        return res.redirect("/settings?error=spotify_not_configured");
-      }
-
-      try {
-        const tokenResponse = await fetch(
-          "https://accounts.spotify.com/api/token",
-          {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/x-www-form-urlencoded",
-              Authorization:
-                "Basic " +
-                Buffer.from(`${clientId}:${clientSecret}`).toString("base64"),
-            },
-            body: new URLSearchParams({
-              grant_type: "authorization_code",
-              code: String(code),
-              redirect_uri: redirectUri,
-            }),
-          }
-        );
-
-        if (!tokenResponse.ok) {
-          const body = await tokenResponse.text();
-          console.error("Spotify token exchange failed:", body);
-          throw new Error("Failed to get Spotify token");
-        }
-
-        const tokenData: any = await tokenResponse.json();
-        const accessToken = tokenData.access_token;
-
-        const profileResponse = await fetch("https://api.spotify.com/v1/me", {
-          headers: {
-            Authorization: `Bearer ${accessToken}`,
-          },
-        });
-
-        if (!profileResponse.ok) {
-          const body = await profileResponse.text();
-          console.error("Spotify profile fetch failed:", body);
-          throw new Error("Failed to get Spotify profile");
-        }
-
-        const profileData = await profileResponse.json();
-
-        const currentUserId = await getOptionalUserId(req);
-        let user;
-
-        if (currentUserId) {
-          user = await storage.getUser(currentUserId);
-
-          if (!user) {
-            return res.redirect("/login?error=user_not_found");
-          }
-        } else {
-          user = await storage.getUserBySpotifyId(profileData.id);
-
-          if (!user && profileData.email) {
-            user = await storage.getUserByEmail(profileData.email.toLowerCase());
-          }
-
-          if (!user) {
-            user = await storage.createUser({
-              displayName: profileData.display_name || "Spotify User",
-              email: profileData.email?.toLowerCase?.(),
-              role: "fan",
-              radiusKm: 150,
-            } as any);
-          }
-        }
-
-        console.log("Spotify profile OK:", profileData);
-        console.log("Current user ID:", currentUserId);
-        console.log("Resolved user:", user);
-        console.log("Saving Spotify account for user:", user.id, profileData.id);
-
-        await storage.upsertSpotifyAccount({
-          userId: user.id,
-          spotifyUserId: profileData.id,
-          accessToken: tokenData.access_token,
-          refreshToken: tokenData.refresh_token,
-          expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
-          scope: tokenData.scope,
-          tokenType: tokenData.token_type,
-        });
-
-        console.log("Spotify account saved successfully");
-
-        const sessionToken = await createSession(user.id);
-        setSessionCookie(res, sessionToken);
-
-        console.log("Spotify callback success, redirecting home");
-        return res.redirect("/");
-      } catch (e) {
-        console.error("Spotify callback error FULL:", e);
-        return res.redirect("/spotify-connect?error=spotify_auth_failed");
+      if (!user) {
+        user = await storage.createUser({
+          displayName: profile.display_name || "Spotify User",
+          email: profile.email?.toLowerCase?.(),
+          role: "fan",
+          radiusKm: 150,
+        } as any);
       }
     }
-  );
 
-  app.get(
-    "/api/auth/spotify/login",
-    requireAuth,
-    async (_req: any, res: Response) => {
-      const clientId = process.env.SPOTIFY_CLIENT_ID;
-      const redirectUri = process.env.SPOTIFY_REDIRECT_URI;
-
-      if (!clientId || !redirectUri) {
-        return res.redirect("/settings?error=spotify_not_configured");
-      }
-
-      const state = Math.random().toString(36).slice(2);
-
-      res.cookie("spotify_oauth_state", state, {
-        httpOnly: true,
-        sameSite: "lax",
-        secure: false,
-        path: "/",
-      });
-
-      const scope = [
-        "user-read-email",
-        "user-top-read",
-        "user-follow-read",
-      ].join(" ");
-
-      const authUrl =
-        "https://accounts.spotify.com/authorize?" +
-        new URLSearchParams({
-          client_id: clientId,
-          response_type: "code",
-          redirect_uri: redirectUri,
-          scope,
-          state,
-        }).toString();
-
-      return res.redirect(authUrl);
+    if (!user) {
+      return res.redirect("/login?error=user_not_found");
     }
-  );
 
-  app.get(
-    "/api/auth/spotify/status",
-    requireAuth,
-    async (req: any, res: Response) => {
-      try {
-        const account = await storage.getSpotifyAccount(req.userId);
+    // 🔹 SAVE ACCOUNT
+    await storage.upsertSpotifyAccount({
+      userId: user.id,
+      spotifyUserId: profile.id,
+      accessToken: tokenData.access_token,
+      refreshToken: tokenData.refresh_token,
+      expiresAt: new Date(Date.now() + tokenData.expires_in * 1000),
+      scope: tokenData.scope,
+      tokenType: tokenData.token_type,
+    });
 
-        if (!account) {
-          return res.json({ connected: false });
-        }
+    // 🔹 SESSION
+    const sessionToken = await createSession(user.id);
+    setSessionCookie(res, sessionToken);
 
-        return res.json({
-          connected: true,
-          spotifyUserId: account.spotifyUserId,
-          expiresAt: account.expiresAt,
-        });
-      } catch (err) {
-        console.error("Spotify status error:", err);
-        return res.status(500).json({ message: "Failed to get Spotify status" });
-      }
+    return res.redirect("/");
+  } catch (err) {
+    console.error("Spotify callback crash:", err);
+    return res.redirect("/settings?error=spotify_crash");
+  }
+});
+
+
+app.get("/api/auth/spotify/login", async (req: Request, res: Response) => {
+  const clientId = process.env.SPOTIFY_CLIENT_ID!;
+  const redirectUri = process.env.SPOTIFY_REDIRECT_URI!;
+
+  const scope = [
+    "user-read-email",
+    "user-top-read",
+    "user-follow-read",
+    "user-read-recently-played",
+  ].join(" ");
+
+  const authUrl =
+    "https://accounts.spotify.com/authorize?" +
+    new URLSearchParams({
+      client_id: clientId,
+      response_type: "code",
+      redirect_uri: redirectUri,
+      scope,
+    }).toString();
+
+  return res.redirect(authUrl);
+});
+
+
+app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response) => {
+  try {
+    const account = await storage.getSpotifyAccount(req.userId);
+
+    if (!account) {
+      return res.json({ connected: false });
     }
-  );
+
+    return res.json({
+      connected: true,
+      spotifyUserId: account.spotifyUserId,
+      expiresAt: account.expiresAt,
+    });
+  } catch (err) {
+    console.error("Spotify status error:", err);
+    return res.status(500).json({ message: "Failed to get Spotify status" });
+  }
+});
 
   app.post(
     "/api/auth/spotify/disconnect",
