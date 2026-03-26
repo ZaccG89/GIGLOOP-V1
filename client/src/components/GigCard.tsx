@@ -428,7 +428,7 @@ export default function GigCard({
       {event.ticketUrl ? (
         <button
           onClick={handleTickets}
-          className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold"
+          className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
         >
           🎟 Get Tickets
         </button>
