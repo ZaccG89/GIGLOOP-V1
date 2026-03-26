@@ -334,42 +334,39 @@ export default function GigCard({
         role="article"
         onClick={onClick}
         data-testid={`card-gig-${event.id}`}
-        className="group cursor-pointer overflow-hidden p-0 hover:-translate-y-0.5"
-      >
-        <div className="relative h-[180px] w-full bg-[#0b0f1a]">
-          {event.imageUrl ? (
-            <img
-              src={event.imageUrl}
-              alt={event.name}
-              className="h-full w-full object-cover opacity-85 transition-transform duration-300 group-hover:scale-[1.02]"
-            />
-          ) : (
-            <div className="flex h-full w-full items-center justify-center">
-              <Music className="h-14 w-14 text-white/20" />
-            </div>
-          )}
+        className="group cursor-pointer overflow-hidden p-0 hover:-translate-y-0.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(139,92,246,0.15)]"
+>
+        <div className="relative h-[200px] w-full overflow-hidden">
+  {event.imageUrl ? (
+    <img
+      src={event.imageUrl}
+      alt={event.name}
+      className="h-full w-full object-cover"
+    />
+  ) : (
+    <div className="flex h-full w-full items-center justify-center bg-black">
+      <Music className="h-14 w-14 text-white/20" />
+    </div>
+  )}
 
-          <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/75 via-black/20 to-transparent" />
+  {/* gradient */}
+  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
-          {isMatch ? (
-            <div className="absolute left-3 top-3 rounded-full bg-purple-500 px-2.5 py-1 text-[11px] font-extrabold text-[#05060A] shadow-[0_0_12px_rgba(155,92,255,0.5)]">
-              {Math.round(matchScore * 100)}% Match
-            </div>
-          ) : (
-            <div className="absolute left-3 top-3 rounded-full border border-white/10 bg-black/50 px-2.5 py-1 text-[11px] font-semibold text-zinc-200">
-              Nearby
-            </div>
-          )}
+  {/* top tag */}
+  <div className="absolute top-3 left-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+    Nearby
+  </div>
 
-          {locationLabel && (
-            <div className="absolute bottom-3 right-3 rounded-full border border-white/10 bg-black/50 px-2 py-1 text-[11px] text-zinc-200">
-              {locationLabel}
-            </div>
-          )}
-        </div>
+  {/* location */}
+  {locationLabel && (
+    <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+      {locationLabel}
+    </div>
+  )}
+</div>
 
-        <div className="p-4">
-          <p className="truncate text-[18px] font-semibold leading-[1.3] text-white">
+          <div className="p-4 space-y-1">        
+           <p className="text-lg font-bold text-white">
             {event.name}
           </p>
 
@@ -393,9 +390,23 @@ export default function GigCard({
             {goingCount} {goingCount === 1 ? "person" : "people"} going
           </p>
         </div>
+         
+         <div className="mx-4 mb-4 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20">
+  <p className="text-xs text-purple-300 uppercase">
+    Be the first to soundcheck
+  </p>
 
-        <div className="flex items-center justify-between px-4 pb-3">
-          <div className="flex flex-wrap items-center gap-2">
+  <p className="text-lg font-semibold text-white">
+    {soundchecked ? "You're going" : "0 soundchecks"}
+  </p>
+
+  <p className="text-xs text-white/50">
+    Tap soundcheck if you're going
+  </p>
+</div>
+
+        <div className="flex gap-2 px-4 pb-4">
+          <div className="flex w-full gap-2">
             <IconBtn
               label="Save"
               onClick={handleSave}
