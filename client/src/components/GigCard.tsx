@@ -330,155 +330,122 @@ export default function GigCard({
 
   return (
     <>
-      <Card
-        role="article"
-        onClick={onClick}
-        data-testid={`card-gig-${event.id}`}
-        className="group cursor-pointer overflow-hidden p-0 hover:-translate-y-0.5 rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_30px_rgba(139,92,246,0.15)]"
->
-        <div className="relative h-[200px] w-full overflow-hidden">
-  {event.imageUrl ? (
-    <img
-      src={event.imageUrl}
-      alt={event.name}
-      className="h-full w-full object-cover"
-    />
-  ) : (
-    <div className="flex h-full w-full items-center justify-center bg-black">
-      <Music className="h-14 w-14 text-white/20" />
-    </div>
-  )}
-
-  {/* gradient */}
-  <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-  {/* top tag */}
-  <div className="absolute top-3 left-3 px-3 py-1 text-xs bg-black/60 rounded-full">
-    Nearby
-  </div>
-
-  {/* location */}
-  {locationLabel && (
-    <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
-      {locationLabel}
-    </div>
-  )}
-</div>
-
-          <div className="p-4 space-y-1">        
-           <p className="text-lg font-bold text-white">
-            {event.name}
-          </p>
-
-          {event.venueName && (
-            <p className="mt-0.5 truncate text-sm text-zinc-400">
-              {event.venueName}
-            </p>
-          )}
-
-          {formattedDate && (
-            <p className="mt-1 text-sm text-zinc-400">{formattedDate}</p>
-          )}
-
-          {matchReason && (
-            <p className="mt-2 truncate text-[13px] text-purple-400">
-              {matchReason}
-            </p>
-          )}
-
-          <p className="mt-2 text-[13px] text-zinc-400">
-            {goingCount} {goingCount === 1 ? "person" : "people"} going
-          </p>
-        </div>
-         
-         <div className="mx-4 mb-4 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20">
-  <p className="text-xs text-purple-300 uppercase">
-    Be the first to soundcheck
-  </p>
-
-  <p className="text-lg font-semibold text-white">
-    {soundchecked ? "You're going" : "0 soundchecks"}
-  </p>
-
-  <p className="text-xs text-white/50">
-    Tap soundcheck if you're going
-  </p>
-</div>
-
-        <div className="flex gap-2 px-4 pb-4">
-          <div className="flex w-full gap-2">
-            <IconBtn
-              label="Save"
-              onClick={handleSave}
-              active={saved}
-              disabled={saveMutation.isPending}
-              data-testid="button-save"
-            >
-              <Bookmark
-                className="h-4 w-4"
-                fill={saved ? "currentColor" : "none"}
-              />
-            </IconBtn>
-
-            <IconBtn
-              label="Share"
-              onClick={handleShare}
-              active={shared}
-              disabled={shareMutation.isPending}
-              data-testid="button-share"
-            >
-              <Share2 className="h-4 w-4" />
-            </IconBtn>
-
-            <IconBtn
-              label="Soundcheck"
-              onClick={handleSoundcheck}
-              active={soundchecked}
-              disabled={soundcheckMutation.isPending}
-              data-testid="button-soundcheck"
-            >
-              <SoundcheckIcon className="h-4 w-4" />
-            </IconBtn>
-
-            <IconBtn
-              label="Going"
-              onClick={handleGoing}
-              active={isGoing}
-              disabled={attendanceMutation.isPending}
-              data-testid="button-going"
-            >
-              <Users className="h-4 w-4" fill={isGoing ? "currentColor" : "none"} />
-            </IconBtn>
-          </div>
-        </div>
-
-        <div className="px-4 pb-4">
-          {event.ticketUrl ? (
-            <button
-              onClick={handleTickets}
-              data-testid={`button-tickets-${event.id}`}
-              className="flex w-full items-center justify-center gap-2 rounded-[14px] bg-gradient-to-r from-purple-600 to-purple-500 px-4 py-3 text-[15px] font-bold text-white shadow-[0_0_0_1px_rgba(155,92,255,0.25),0_10px_30px_rgba(155,92,255,0.20)] transition-all hover:from-purple-500 hover:to-purple-400"
-            >
-              <Ticket className="h-4 w-4" />
-              Get Tickets
-            </button>
-          ) : (
-            <div className="flex w-full items-center justify-center gap-2 rounded-[14px] border border-white/10 bg-white/[0.04] px-4 py-3 text-[15px] font-semibold text-zinc-400">
-              <Ticket className="h-4 w-4" />
-              No Tickets Listed
-            </div>
-          )}
-        </div>
-      </Card>
-
-      <LockedFeatureModal
-        open={guestLockOpen}
-        onOpenChange={setGuestLockOpen}
+      <>
+  <Card
+    role="article"
+    onClick={onClick}
+    data-testid={`card-gig-${event.id}`}
+    className="group cursor-pointer overflow-hidden rounded-2xl border border-white/10 bg-black/40 backdrop-blur-xl shadow-[0_0_40px_rgba(139,92,246,0.15)]"
+  >
+    {/* IMAGE */}
+    <div className="relative h-[220px] w-full overflow-hidden">
+      <img
+        src={event.imageUrl || "/placeholder.jpg"}
+        className="w-full h-full object-cover"
       />
-    </>
-  );
-}
 
+      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
+
+      <div className="absolute top-3 left-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+        Nearby
+      </div>
+
+      {locationLabel && (
+        <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+          {locationLabel}
+        </div>
+      )}
+    </div>
+
+    {/* CONTENT */}
+    <div className="p-4 space-y-2">
+
+      <h2 className="text-lg font-bold text-white">
+        {event.name}
+      </h2>
+
+      <p className="text-sm text-white/70">
+        {event.venueName}
+      </p>
+
+      <p className="text-sm text-white/50">
+        {formattedDate}
+      </p>
+
+      {/* SOUND CHECK CARD */}
+      <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.25)]">
+        <p className="text-xs text-purple-300 uppercase">
+          Be the first to soundcheck
+        </p>
+
+        <p className="text-lg font-semibold text-white">
+          {soundchecked ? "You're going" : "0 soundchecks"}
+        </p>
+
+        <p className="text-xs text-white/50">
+          Tap soundcheck if you're going
+        </p>
+      </div>
+
+      {/* ACTION ROW */}
+      <div className="mt-3 space-y-2">
+
+        <button
+          onClick={handleSoundcheck}
+          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold shadow-[0_0_25px_rgba(168,85,247,0.6)]"
+        >
+          🎧 Soundcheck
+        </button>
+
+        <div className="flex gap-2">
+
+          <button
+            onClick={handleSave}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            🔖
+          </button>
+
+          <button
+            onClick={handleShare}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            🔗
+          </button>
+
+          <button
+            onClick={handleGoing}
+            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+          >
+            👥
+          </button>
+
+        </div>
+      </div>
+    </div>
+
+    {/* TICKETS */}
+    <div className="px-4 pb-4">
+      {event.ticketUrl ? (
+        <button
+          onClick={handleTickets}
+          className="w-full py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold"
+        >
+          🎟 Get Tickets
+        </button>
+      ) : (
+        <div className="w-full py-3 rounded-xl border border-white/10 text-center text-white/40">
+          No Tickets Listed
+        </div>
+      )}
+    </div>
+  </Card>
+
+  <LockedFeatureModal
+    open={guestLockOpen}
+    onOpenChange={setGuestLockOpen}
+  />
+</>
 function IconBtn({
   children,
   onClick,
