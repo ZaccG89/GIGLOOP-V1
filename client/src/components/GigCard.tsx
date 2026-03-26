@@ -330,7 +330,6 @@ export default function GigCard({
 
   return (
     <>
-      <>
   <Card
     role="article"
     onClick={onClick}
@@ -446,6 +445,9 @@ export default function GigCard({
     onOpenChange={setGuestLockOpen}
   />
 </>
+  );
+}
+
 function IconBtn({
   children,
   onClick,
