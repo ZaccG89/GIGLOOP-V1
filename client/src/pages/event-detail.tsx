@@ -21,6 +21,16 @@ function fmtDateTime(v: any) {
 }
 
 export default function EventDetail() {
+  const handleDelete = async () => {
+  if (!confirm("Delete this event?")) return;
+
+  await fetch(`https://gigloop-v1.onrender.com/api/admin/events/${event.id}`, {
+    method: "DELETE",
+    credentials: "include",
+  });
+
+  window.location.href = "/";
+};
   const [, params] = useRoute("/events/:id");
   const { data: user } = useAuth();
   const eventId = params?.id as string;
@@ -407,8 +417,15 @@ export default function EventDetail() {
                 <MapPin />
               </button>
             </a>
+            
           )}
         </div>
+        <button
+          onClick={handleDelete}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
+>
+          Delete Event
+          </button>
 
         <div style={{ marginTop: 24 }}>
           {ticketUrl ? (
