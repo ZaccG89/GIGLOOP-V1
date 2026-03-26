@@ -1059,6 +1059,23 @@ res.cookie("gigloop_session", token, {
   }
 });
 
+   app.delete("/api/admin/events/:id", requireAuth, async (req: any, res: Response) => {
+  try {
+    const eventId = getParam(req.params.id);
+
+    if (!eventId) {
+      return res.status(400).json({ message: "Missing event id" });
+    }
+
+    await storage.deleteEvent(eventId);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("DELETE EVENT ERROR:", err);
+    return res.status(500).json({ message: "Failed to delete event" });
+  }
+});
+
   app.get(api.admin.submissions.path, requireAdmin, async (_req: Request, res: Response) => {
     const submissions = await storage.getPendingGigSubmissions();
     return res.json(submissions);
