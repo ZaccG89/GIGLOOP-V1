@@ -574,7 +574,7 @@ res.cookie("gigloop_session", token, {
 
 app.get("/api/auth/spotify/login", async (req: Request, res: Response) => {
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
-  const redirectUri = process.env.SPOTIFY_REDIRECT_URI!;
+  const redirectUri = "https://your-render-url.onrender.com/api/auth/spotify/callback";
 
   const scope = [
     "user-read-email",
