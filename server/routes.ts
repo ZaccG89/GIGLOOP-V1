@@ -1332,7 +1332,8 @@ res.cookie("gigloop_session", token, {
     try {
     const eventId = getParam((req.params as any).eventId);
     const event = await storage.getEventById(eventId);
-
+    
+    
     if (!event) {
       return res.status(404).json({ message: "Event not found" });
     }
@@ -1367,6 +1368,17 @@ res.cookie("gigloop_session", token, {
       venuePostalCode: raw?._embedded?.venues?.[0]?.postalCode || null,
       counts,
     });
+    
+    app.get("/api/events/:eventId/counts", async (req: Request, res: Response) => {
+  try {
+    const eventId = getParam((req.params as any).eventId);
+    const counts = await storage.getEventCounts(eventId);
+    return res.json(counts);
+  } catch (error) {
+    console.error("GET EVENT COUNTS ERROR:", error);
+    return res.status(500).json({ message: "Failed to load counts" });
+  }
+});
   } catch (error) {
     console.error("GET EVENT ERROR:", error);
     return res.status(500).json({ message: "Failed to load event" });
