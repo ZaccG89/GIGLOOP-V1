@@ -371,114 +371,81 @@ export default function GigCard({
         {formattedDate}
       </p>
 
-      {/* SOUND CHECK CARD */}
-      <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.25)]">
-        <p className="text-xs text-purple-300 uppercase">
-          Be the first to soundcheck
-        </p>
-
-        <p className="text-lg font-semibold text-white">
-          {soundchecked ? "You're going" : "0 soundchecks"}
-        </p>
-
-        <p className="text-xs text-white/50">
-          Tap soundcheck if you're going
-        </p>
-      </div>
-
       {/* ACTION ROW */}
-      <div className="mt-3 space-y-2">
+<div className="mt-3">
+  <div className="flex gap-2">
 
-        <button
-          onClick={handleSoundcheck}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold shadow-[0_0_25px_rgba(168,85,247,0.6)]"
-        >
-          🎧 Soundcheck
-        </button>
-
-        <div className="flex gap-2">
-
-          <button
-            onClick={handleSave}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
-          >
-            🔖
-          </button>
-
-          <button
-            onClick={handleShare}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
-          >
-            🔗
-          </button>
-
-          <button
-            onClick={handleGoing}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
-          >
-            👥
-          </button>
-
-        </div>
-      </div>
-    </div>
-
-    {/* TICKETS */}
-    <div className="px-4 pb-4">
-      {event.ticketUrl ? (
-        <button
-          onClick={handleTickets}
-          className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
-        >
-          🎟 Get Tickets
-        </button>
-      ) : (
-        <div className="w-full py-3 rounded-xl border border-white/10 text-center text-white/40">
-          No Tickets Listed
-        </div>
-      )}
-    </div>
-  </Card>
-
-  <LockedFeatureModal
-    open={guestLockOpen}
-    onOpenChange={setGuestLockOpen}
-  />
-</>
-  );
-}
-
-function IconBtn({
-  children,
-  onClick,
-  active,
-  label,
-  disabled,
-  ...rest
-}: {
-  children: React.ReactNode;
-  onClick: (e: React.MouseEvent) => void;
-  active?: boolean;
-  label: string;
-  disabled?: boolean;
-  [key: string]: unknown;
-}) {
-  return (
     <button
-      type="button"
-      aria-label={label}
-      onClick={onClick}
-      disabled={disabled}
-      {...rest}
+      onClick={handleSoundcheck}
       className={[
-        "flex h-9 w-9 items-center justify-center rounded-[10px] border transition-all",
-        active
-          ? "border-purple-400/80 bg-purple-500/20 text-purple-400 shadow-[0_0_16px_rgba(155,92,255,0.45)]"
-          : "border-white/10 bg-transparent text-zinc-400 hover:bg-white/5 hover:text-white",
-        disabled ? "cursor-default opacity-60" : "cursor-pointer",
+        "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border transition-all font-medium",
+        soundchecked
+          ? "border-pink-400 bg-pink-500 text-white shadow-[0_0_18px_rgba(236,72,153,0.35)]"
+          : "border-pink-400/70 bg-transparent text-white hover:bg-pink-500/10"
       ].join(" ")}
     >
-      {children}
+      <span className="text-sm">🎧</span>
+      <span>Soundcheck</span>
     </button>
-  );
+
+    <button
+      onClick={handleSave}
+      className={[
+        "flex-1 flex items-center justify-center py-2 rounded-xl border transition-all",
+        saved
+          ? "border-pink-400 bg-pink-500 text-white shadow-[0_0_18px_rgba(236,72,153,0.35)]"
+          : "border-pink-400/70 bg-transparent text-white hover:bg-pink-500/10 hover:text-white"
+      ].join(" ")}
+    >
+      <Bookmark
+        className="h-5 w-5"
+        fill={saved ? "currentColor" : "none"}
+      />
+    </button>
+
+    <button
+      onClick={handleShare}
+      className={[
+        "flex-1 flex items-center justify-center py-2 rounded-xl border transition-all",
+        shared
+          ? "border-pink-400 bg-pink-500 text-white shadow-[0_0_18px_rgba(236,72,153,0.35)]"
+          : "border-pink-400/70 bg-transparent text-white hover:bg-pink-500/10 hover:text-white"
+      ].join(" ")}
+    >
+      <Share2 className="h-5 w-5" />
+    </button>
+
+  </div>
+</div>
+</div>
+
+{/* TICKETS */}
+<div className="px-4 pb-4">
+  {event.ticketUrl ? (
+    <button
+      onClick={handleTickets}
+      className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+    >
+      Get Tickets
+    </button>
+  ) : (
+    <button
+  onClick={(e) => {
+    e.stopPropagation();
+    window.location.href = `/venues/${encodeURIComponent(event.venueName || "")}`;
+  }}
+  className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+>
+  Contact Venue for Tickets
+</button>
+  )}
+</div>
+</Card>
+
+<LockedFeatureModal
+  open={guestLockOpen}
+  onOpenChange={setGuestLockOpen}
+/>
+</>
+);
 }
