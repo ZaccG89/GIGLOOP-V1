@@ -138,8 +138,17 @@ export default function EventDetail() {
           return;
         }
 
-        if (!res.ok) {
-          throw new Error("Failed to load event");
+                if (!res.ok) {
+          throw new Error(`Failed to load event (${res.status})`);
+        }
+
+        const contentType = res.headers.get("content-type") || "";
+
+        if (!contentType.includes("application/json")) {
+          const text = await res.text();
+          throw new Error(
+            `Event API returned non-JSON for /api/events/${eventId}: ${text.slice(0, 120)}`
+          );
         }
 
         const data = await res.json();
