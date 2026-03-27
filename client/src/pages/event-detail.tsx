@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
 import { SoundcheckIcon } from "../components/SoundcheckIcon";
+import { MapPin, Share2, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
@@ -346,110 +347,152 @@ export default function EventDetail() {
       )}
     </div>
 
-    {/* CONTENT */}
-    <div className="mt-4 space-y-2">
+          {/* CONTENT */}
+      <div className="mt-5 space-y-4">
+        <div className="space-y-2">
+          <h1 className="text-2xl font-bold tracking-tight text-white">
+            {title}
+          </h1>
 
-      <h1 className="text-xl font-bold text-white">
-        {title}
-      </h1>
+          {venueName && (
+            <p className="text-white/75 text-lg">
+              {venueName}
+            </p>
+          )}
 
-      <p className="text-white/70">
-        {venueName}
-      </p>
+          <p className="text-white/55 text-sm">
+            {fmtDateTime(startTime)}
+          </p>
+        </div>
 
-      <p className="text-white/50 text-sm">
-        {fmtDateTime(startTime)}
-      </p>
+        {/* ACTIONS */}
+        <div className="space-y-3">
+          <div className="grid grid-cols-3 gap-3">
+            <button
+              onClick={handleSoundcheck}
+              className="flex items-center justify-center gap-2 rounded-2xl border border-purple-500/70 px-4 py-3 text-white font-semibold shadow-[0_0_20px_rgba(168,85,247,0.18)]"
+            >
+              <SoundcheckIcon className="h-5 w-5" />
+              <span>Soundcheck</span>
+            </button>
 
-      <p className="text-white/50 text-sm">
-        {attendanceData?.count ?? 0} people going
-      </p>
+            <button
+              onClick={handleLike}
+              className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
+            >
+              <Users className="h-5 w-5" />
+            </button>
 
-      {/* SOUND CHECK BOX */}
-      <div className="mt-3 p-4 rounded-xl bg-gradient-to-r from-purple-900/40 to-pink-900/20 border border-purple-500/20 shadow-[0_0_25px_rgba(168,85,247,0.25)]">
-        <p className="text-xs text-purple-300 uppercase">
-          Be the first to soundcheck
-        </p>
+            <button
+              onClick={handleShare}
+              className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
+            >
+              <Share2 className="h-5 w-5" />
+            </button>
+          </div>
 
-        <p className="text-lg font-semibold text-white">
-          {counts.soundchecks ?? 0} soundchecks
-        </p>
+          {/* VENUE INFO */}
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                Venue
+              </p>
+              <p className="mt-1 text-white font-medium">
+                {venueName || "Venue TBC"}
+              </p>
+              <p className="mt-1 text-sm text-white/55">
+                {[event?.address, event?.suburb, city, state, event?.postcode]
+                  .filter(Boolean)
+                  .join(", ") || "Location details coming soon"}
+              </p>
+            </div>
 
-        <p className="text-lg font-semibold text-white">
-          {counts.soundchecks ?? 0} soundchecks
-        </p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  const query = [
+                    venueName,
+                    event?.address,
+                    event?.suburb,
+                    city,
+                    state,
+                    event?.postcode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
 
-        <p className="text-xs text-white/50">
-          Tap soundcheck if you're going
-        </p>
-      </div>
+                  if (!query) return;
 
-      {/* ACTIONS */}
-      <div className="mt-3 space-y-2">
+                  window.open(
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
+              >
+                <MapPin className="h-4 w-4" />
+                <span>View Location</span>
+              </button>
 
-        <button
-          onClick={handleSoundcheck}
-          className="w-full flex items-center justify-center gap-2 py-3 rounded-xl bg-gradient-to-r from-purple-600 to-pink-500 text-white font-semibold shadow-[0_0_25px_rgba(168,85,247,0.6)]"
-        >
-          🎧 Soundcheck
-        </button>
+              <button
+                onClick={handleGoing}
+                className="rounded-xl border border-white/10 px-4 py-3 text-white/90 min-w-[92px]"
+              >
+                {attendanceData?.count ?? 0}
+              </button>
+            </div>
+          </div>
+        </div>
 
-        <div className="flex gap-2">
-
+        {/* ADMIN DELETE */}
+        {isAdmin && (
           <button
-            onClick={handleLike}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
+            onClick={handleDelete}
+            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-xl"
           >
-            ❤️ {counts.likes ?? 0}
+            Delete Event
           </button>
+        )}
 
-          <button
-            onClick={handleShare}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
-          >
-            🔗 {counts.shares ?? 0}
-          </button>
+        {/* TICKETS */}
+        <div className="pt-1">
+          {ticketUrl ? (
+            <button
+              onClick={() => window.open(ticketUrl, "_blank", "noopener,noreferrer")}
+              className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+            >
+              Get Tickets
+            </button>
+          ) : (
+            <button
+              onClick={() => {
+                const query = [
+                  venueName,
+                  event?.address,
+                  event?.suburb,
+                  city,
+                  state,
+                  event?.postcode,
+                ]
+                  .filter(Boolean)
+                  .join(", ");
 
-          <button
-            onClick={handleGoing}
-            className="flex-1 py-2 rounded-xl border border-white/10 text-white/70"
-          >
-            👥 {attendanceData?.count ?? 0}
-          </button>
+                if (!query) return;
 
+                window.open(
+                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+                  "_blank",
+                  "noopener,noreferrer"
+                );
+              }}
+              className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+            >
+              Contact Venue for Tickets
+            </button>
+          )}
         </div>
       </div>
-
-      {/* ADMIN DELETE */}
-      {isAdmin && (
-        <button
-          onClick={handleDelete}
-          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
-        >
-          Delete Event
-        </button>
-      )}
-
-      {/* TICKETS */}
-      <div className="mt-4">
-        {ticketUrl ? (
-          <button
-            onClick={() => {
-              if (!ticketUrl) return;
-              window.open(ticketUrl, "_blank", "noopener,noreferrer");
-            }}
-            className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
-          >
-            🎟 Get Tickets
-          </button>
-        ) : (
-          <div className="w-full py-3 rounded-xl border border-white/10 text-center text-white/40">
-            No Tickets Listed
-          </div>
-        )}
-      </div>
-
-    </div>
   </div>
 
   <LockedFeatureModal
