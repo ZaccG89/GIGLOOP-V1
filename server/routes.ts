@@ -21,7 +21,6 @@ import { db } from "./db";
 import { eq } from "drizzle-orm";
 import { spotifyAccounts } from "@shared/schema";
 import { InsertUserArtist } from "@shared/schema";
-import { Link } from "wouter";
 
 const COOKIE_NAME = "gigloop_session";
 
@@ -293,13 +292,9 @@ export async function registerRoutes(
         radiusKm: 150,
       } as any);
 
-     const token = await createSession((user as any).id);
-
-res.cookie("gigloop_session", token, {
-  httpOnly: true,
-  sameSite: "lax",
-  secure: process.env.NODE_ENV === "production",
-});
+     
+      const token = await createSession((user as any).id);
+      setSessionCookie(res, token);
       
       return res.status(201).json(user);
     } catch (e: any) {
@@ -564,7 +559,7 @@ res.cookie("gigloop_session", token, {
     const sessionToken = await createSession(user.id);
     setSessionCookie(res, sessionToken);
 
-    return res.redirect("/");
+    return res.redirect("/feed");
   } catch (err) {
     console.error("Spotify callback crash:", err);
     return res.redirect("/settings?error=spotify_crash");
@@ -1014,10 +1009,19 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
   }
 });
 
-   app.delete("/api/admin/events/:id", async (req: any, res: Response) => {
+   app.delete("/api/admin/events/:id", requireAuth, async (req: any, res: Response) => {
   try {
-    const eventId = req.params.id;
+    const user = await storage.getUser(req.userId);
 
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const eventId = req.params.id;
     await storage.deleteEvent(eventId);
 
     return res.json({ success: true });
@@ -1282,63 +1286,5 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
     const ids = await storage.getUserShareIds(req.userId);
     return res.json(ids);
   });
-
-  app.get("/api/events/:eventId", async (req: Request, res: Response) => {
-    try {
-    const eventId = getParam((req.params as any).eventId);
-    const event = await storage.getEventById(eventId);
-    
-    
-    if (!event) {
-      return res.status(404).json({ message: "Event not found" });
-    }
-
-    const counts = await storage.getEventCounts(eventId);
-    const raw = (event as any).rawJson as any;
-
-    return res.json({
-      id: event.id,
-      provider: event.provider,
-      providerEventId: event.providerEventId,
-      name: event.name,
-      startTime: event.startTime,
-      venueName: event.venueName,
-      venueLat: event.venueLat,
-      venueLng: event.venueLng,
-      city: event.city,
-      state: event.state,
-      ticketUrl: event.ticketUrl,
-      imageUrl: event.imageUrl,
-      status: event.status,
-      description:
-        raw?.info ||
-        raw?.pleaseNote ||
-        raw?.accessibility?.info ||
-        null,
-      genre:
-        raw?.classifications?.[0]?.genre?.name ||
-        raw?.classifications?.[0]?.segment?.name ||
-        null,
-      venueAddress: raw?._embedded?.venues?.[0]?.address?.line1 || null,
-      venuePostalCode: raw?._embedded?.venues?.[0]?.postalCode || null,
-      counts,
-    });
-    
-    app.get("/api/events/:eventId/counts", async (req: Request, res: Response) => {
-  try {
-    const eventId = getParam((req.params as any).eventId);
-    const counts = await storage.getEventCounts(eventId);
-    return res.json(counts);
-  } catch (error) {
-    console.error("GET EVENT COUNTS ERROR:", error);
-    return res.status(500).json({ message: "Failed to load counts" });
-  }
-});
-  } catch (error) {
-    console.error("GET EVENT ERROR:", error);
-    return res.status(500).json({ message: "Failed to load event" });
-  
-  }
-});
 
 }
