@@ -260,45 +260,36 @@ export default function GigCard({
   };
 
   const handleShare = useCallback(
-    async (e: React.MouseEvent) => {
-      e.preventDefault();
-      e.stopPropagation();
+  async (e: React.MouseEvent) => {
+    e.preventDefault();
+    e.stopPropagation();
+    e.nativeEvent.stopImmediatePropagation?.();
 
-      if (!requireAuth() || shareMutation.isPending) return;
+    if (!requireAuth() || shareMutation.isPending) return;
 
-      const shareUrl = `${window.location.origin}/events/${event.id}`;
+    const shareUrl = `${window.location.origin}/events/${event.id}`;
 
-const shareData = {
-  title: event.name,
-  text: `Check out ${event.name}${
-    event.venueName ? ` at ${event.venueName}` : ""
-  }`,
-  url: shareUrl,
-};
-
-try {
-  if (navigator.share) {
-    await navigator.share(shareData);
-  } else {
-    await navigator.clipboard.writeText(shareUrl);
-    toast({ title: "Link copied to clipboard" });
-  }
-
-        shareMutation.mutate();
-      } catch {
-        // user cancelled share
+    try {
+      if (navigator.share) {
+        await navigator.share({
+          title: event.name,
+          text: `Check out ${event.name}${
+            event.venueName ? ` at ${event.venueName}` : ""
+          }`,
+          url: shareUrl,
+        });
+      } else {
+        await navigator.clipboard.writeText(shareUrl);
+        toast({ title: "Link copied to clipboard" });
       }
-    },
-    [
-      event.id,
-      event.name,
-      event.venueName,
-      shareMutation,
-      toast,
-      requireAuth,
-    ]
-  );
 
+      shareMutation.mutate();
+    } catch (error) {
+      console.error("Share failed", error);
+    }
+  },
+  [event.id, event.name, event.venueName, requireAuth, shareMutation, toast]
+);
   const handleGoing = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
