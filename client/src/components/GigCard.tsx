@@ -408,8 +408,8 @@ export default function GigCard({
       className={[
         "flex-1 flex items-center justify-center py-2 rounded-xl border transition-all",
         shared
-          ? "border-pink-400 bg-pink-500 text-white shadow-[0_0_18px_rgba(236,72,153,0.35)]"
-          : "border-pink-400/70 bg-transparent text-white hover:bg-pink-500/10 hover:text-white"
+          ? "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+          : "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
       ].join(" ")}
     >
       <Share2 className="h-5 w-5" />
