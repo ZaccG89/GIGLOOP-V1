@@ -300,7 +300,14 @@ export default function EventDetail() {
 
   const title = event?.name || "Untitled event";
   const imageUrl = event?.imageUrl;
-  const ticketUrl = event?.ticketUrl;
+
+  const ticketUrl =
+    typeof event?.ticketUrl === "string" && event.ticketUrl.trim()
+      ? event.ticketUrl.startsWith("http://") || event.ticketUrl.startsWith("https://")
+        ? event.ticketUrl
+        : `https://${event.ticketUrl}`
+      : "";
+
   const venueName = event?.venueName;
   const city = event?.city;
   const state = event?.state;
@@ -418,7 +425,10 @@ export default function EventDetail() {
       <div className="mt-4">
         {ticketUrl ? (
           <button
-            onClick={() => window.open(ticketUrl, "_blank")}
+            onClick={() => {
+              if (!ticketUrl) return;
+              window.open(ticketUrl, "_blank", "noopener,noreferrer");
+            }}
             className="w-full py-3 rounded-xl bg-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
           >
             🎟 Get Tickets
