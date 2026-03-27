@@ -266,24 +266,23 @@ export default function GigCard({
 
       if (!requireAuth() || shareMutation.isPending) return;
 
-      const url =
-        event.ticketUrl || `${window.location.origin}/events/${event.id}`;
+      const shareUrl = `${window.location.origin}/events/${event.id}`;
 
-      const shareData = {
-        title: event.name,
-        text: `Check out ${event.name}${
-          event.venueName ? ` at ${event.venueName}` : ""
-        }`,
-        url,
-      };
+const shareData = {
+  title: event.name,
+  text: `Check out ${event.name}${
+    event.venueName ? ` at ${event.venueName}` : ""
+  }`,
+  url: shareUrl,
+};
 
-      try {
-        if (navigator.share) {
-          await navigator.share(shareData);
-        } else {
-          await navigator.clipboard.writeText(url);
-          toast({ title: "Link copied to clipboard" });
-        }
+try {
+  if (navigator.share) {
+    await navigator.share(shareData);
+  } else {
+    await navigator.clipboard.writeText(shareUrl);
+    toast({ title: "Link copied to clipboard" });
+  }
 
         shareMutation.mutate();
       } catch {
@@ -293,7 +292,6 @@ export default function GigCard({
     [
       event.id,
       event.name,
-      event.ticketUrl,
       event.venueName,
       shareMutation,
       toast,
