@@ -1,11 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
-import { Heart, Share2, MapPin, Ticket, Users } from "lucide-react";
 import { SoundcheckIcon } from "../components/SoundcheckIcon";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+
 
 type Counts = {
   likes?: number;
@@ -21,21 +21,27 @@ function fmtDateTime(v: any) {
 }
 
 export default function EventDetail() {
-  const handleDelete = async () => {
-  if (!confirm("Delete this event?")) return;
-
-  await fetch(`https://gigloop-v1.onrender.com/api/admin/events/${event.id}`, {
-    method: "DELETE",
-    credentials: "include",
-  });
-
-  window.location.href = "/";
-};
   const [, params] = useRoute("/events/:id");
-  const { data: user } = useAuth();
+  const { data: user } = useAuth() as { data: any };
   const eventId = params?.id as string;
 
   const queryClient = useQueryClient();
+
+  const isAdmin =
+    typeof user?.email === "string" &&
+    user.email.toLowerCase().includes("admin");
+
+  const handleDelete = async () => {
+    if (!isAdmin) return;
+    if (!confirm("Delete this event?")) return;
+
+    await fetch(`/api/admin/events/${event.id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
+
+    window.location.href = "/";
+  };
 
   const {
     guestLockOpen,
@@ -395,12 +401,14 @@ export default function EventDetail() {
       </div>
 
       {/* ADMIN DELETE */}
-      <button
-        onClick={handleDelete}
-        className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
-      >
-        Delete Event
-      </button>
+      {isAdmin && (
+        <button
+          onClick={handleDelete}
+          className="mt-4 px-4 py-2 bg-red-600 text-white rounded-xl"
+        >
+          Delete Event
+        </button>
+      )}
 
       {/* TICKETS */}
       <div className="mt-4">
