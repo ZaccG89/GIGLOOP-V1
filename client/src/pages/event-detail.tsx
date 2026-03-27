@@ -359,6 +359,10 @@ export default function EventDetail() {
           {counts.soundchecks ?? 0} soundchecks
         </p>
 
+        <p className="text-lg font-semibold text-white">
+          {counts.soundchecks ?? 0} soundchecks
+        </p>
+
         <p className="text-xs text-white/50">
           Tap soundcheck if you're going
         </p>
