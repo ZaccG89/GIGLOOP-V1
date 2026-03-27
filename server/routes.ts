@@ -887,6 +887,27 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
     return res.json(upcomingEvents);
   });
 
+    app.get("/api/events/:id", async (req: Request, res: Response) => {
+    try {
+      const id = getParam((req.params as any).id);
+      const event = await storage.getEventById(id);
+
+      if (!event) {
+        return res.status(404).json({ message: "Event not found" });
+      }
+
+      const counts = await storage.getEventCounts(id);
+
+      return res.json({
+        event,
+        counts,
+      });
+    } catch (error) {
+      console.error("Error fetching event:", error);
+      return res.status(500).json({ message: "Failed to fetch event" });
+    }
+  });
+
   app.get("/api/venue/my-profile", requireAuth, async (req: any, res: Response) => {
     const venue = await storage.getVenueByOwnerId(req.userId);
     if (!venue) {
