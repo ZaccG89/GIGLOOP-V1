@@ -559,7 +559,7 @@ export async function registerRoutes(
     const sessionToken = await createSession(user.id);
     setSessionCookie(res, sessionToken);
 
-    return res.redirect("/feed");
+    return res.redirect("/");
   } catch (err) {
     console.error("Spotify callback crash:", err);
     return res.redirect("/settings?error=spotify_crash");
