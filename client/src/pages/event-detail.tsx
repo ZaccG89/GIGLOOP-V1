@@ -248,7 +248,7 @@ export default function EventDetail() {
 
     if (sharePending) return;
 
-    const shareUrl = event?.ticketUrl || window.location.href;
+    const shareUrl = `${window.location.origin}/events/${eventId}`;
 
     try {
       setSharePending(true);
