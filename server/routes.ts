@@ -483,7 +483,7 @@ res.cookie("gigloop_session", token, {
 
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
-  const redirectUri = process.env.SPOTIFY_REDIRECT_URI!;
+  const redirectUri = "https://gigloop-v1.onrender.com/api/auth/spotify/callback";
 
   try {
     // 🔹 TOKEN EXCHANGE
@@ -574,7 +574,7 @@ res.cookie("gigloop_session", token, {
 
 app.get("/api/auth/spotify/login", async (req: Request, res: Response) => {
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
-  const redirectUri = "https://your-render-url.onrender.com/api/auth/spotify/callback";
+  const redirectUri = "https://gigloop-v1.onrender.com/api/auth/spotify/callback";
 
   const scope = [
     "user-read-email",
