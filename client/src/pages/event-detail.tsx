@@ -1,11 +1,10 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useRoute } from "wouter";
-import { SoundcheckIcon } from "../components/SoundcheckIcon";
-import { MapPin, Share2, Users } from "lucide-react";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { Bookmark, Share2, Ticket, Music, MapPin } from "lucide-react";
 
 
 type Counts = {
@@ -25,8 +24,30 @@ export default function EventDetail() {
   const [, params] = useRoute("/events/:id");
   const { data: user } = useAuth() as { data: any };
   const eventId = params?.id as string;
+  const saveMutation = useMutation({
+  mutationFn: async () => {
+    const res = await fetch(`/api/saves/${eventId}`, {
+      method: "POST",
+      credentials: "include",
+    });
 
+    if (!res.ok) throw new Error("Failed to save");
+    return (await res.json()) as { saved: boolean };
+  },
+  onSuccess: (data) => {
+    setSaved(data.saved);
+  },
+});
+
+  const handleSave = (e: React.MouseEvent) => {
+  e.preventDefault();
+  e.stopPropagation();
+
+  if (saveMutation.isPending) return;
+  saveMutation.mutate();
+};
   const queryClient = useQueryClient();
+  const [saved, setSaved] = useState(false);
 
   const isAdmin =
     typeof user?.email === "string" &&
@@ -377,11 +398,11 @@ export default function EventDetail() {
             </button>
 
             <button
-              onClick={handleLike}
+              onClick={handleSave}
               className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
-            >
-              <Users className="h-5 w-5" />
-            </button>
+               >
+             <Bookmark className="h-5 w-5" fill={saved ? "currentColor" : "none"} />
+             </button>
 
             <button
               onClick={handleShare}
@@ -408,40 +429,33 @@ export default function EventDetail() {
             </div>
 
             <div className="flex gap-3">
-              <button
-                onClick={() => {
-                  const query = [
-                    venueName,
-                    event?.address,
-                    event?.suburb,
-                    city,
-                    state,
-                    event?.postcode,
-                  ]
-                    .filter(Boolean)
-                    .join(", ");
+  <button
+    onClick={() => {
+      const query = [
+        venueName,
+        event?.address,
+        event?.suburb,
+        city,
+        state,
+        event?.postcode,
+      ]
+        .filter(Boolean)
+        .join(", ");
 
-                  if (!query) return;
+      if (!query) return;
 
-                  window.open(
-                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
-                    "_blank",
-                    "noopener,noreferrer"
-                  );
-                }}
-                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
-              >
-                <MapPin className="h-4 w-4" />
-                <span>View Location</span>
-              </button>
-
-              <button
-                onClick={handleGoing}
-                className="rounded-xl border border-white/10 px-4 py-3 text-white/90 min-w-[92px]"
-              >
-                {attendanceData?.count ?? 0}
-              </button>
-            </div>
+      window.open(
+        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+        "_blank",
+        "noopener,noreferrer"
+      );
+    }}
+    className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
+  >
+    <MapPin className="h-4 w-4" />
+    <span>View Location</span>
+  </button>
+</div>
           </div>
         </div>
 
