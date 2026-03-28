@@ -200,29 +200,61 @@ export class DatabaseStorage implements IStorage {
     return account;
   }
 
-  async upsertSpotifyAccount(
-    account: InsertSpotifyAccount
-  ): Promise<SpotifyAccount> {
-    const [upserted] = await db
-      .insert(spotifyAccounts)
-      .values(account)
-      .onConflictDoUpdate({
-        target: spotifyAccounts.userId,
-        set: {
-          spotifyUserId: account.spotifyUserId,
-          accessToken: account.accessToken,
-          refreshToken: account.refreshToken,
-          expiresAt: account.expiresAt,
-          scope: account.scope,
-          tokenType: account.tokenType,
-          updatedAt: new Date(),
-        },
+ async upsertSpotifyAccount(
+  account: InsertSpotifyAccount
+): Promise<SpotifyAccount> {
+  const existingBySpotifyUserId = await db.query.spotifyAccounts.findFirst({
+    where: eq(spotifyAccounts.spotifyUserId, account.spotifyUserId),
+  });
+
+  if (existingBySpotifyUserId) {
+    const [updated] = await db
+      .update(spotifyAccounts)
+      .set({
+        userId: account.userId,
+        spotifyUserId: account.spotifyUserId,
+        accessToken: account.accessToken,
+        refreshToken: account.refreshToken,
+        expiresAt: account.expiresAt,
+        scope: account.scope,
+        tokenType: account.tokenType,
+        updatedAt: new Date(),
       })
+      .where(eq(spotifyAccounts.spotifyUserId, account.spotifyUserId))
       .returning();
 
-    return upserted;
+    return updated;
   }
 
+  const existingByUserId = await db.query.spotifyAccounts.findFirst({
+    where: eq(spotifyAccounts.userId, account.userId),
+  });
+
+  if (existingByUserId) {
+    const [updated] = await db
+      .update(spotifyAccounts)
+      .set({
+        spotifyUserId: account.spotifyUserId,
+        accessToken: account.accessToken,
+        refreshToken: account.refreshToken,
+        expiresAt: account.expiresAt,
+        scope: account.scope,
+        tokenType: account.tokenType,
+        updatedAt: new Date(),
+      })
+      .where(eq(spotifyAccounts.userId, account.userId))
+      .returning();
+
+    return updated;
+  }
+
+  const [created] = await db
+    .insert(spotifyAccounts)
+    .values(account)
+    .returning();
+
+  return created;
+}
   async getAppleAccount(userId: string): Promise<AppleAccount | undefined> {
     const [account] = await db
       .select()
