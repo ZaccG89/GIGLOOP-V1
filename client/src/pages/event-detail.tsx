@@ -372,7 +372,7 @@ export default function EventDetail() {
               onClick={handleSoundcheck}
               className="flex items-center justify-center gap-2 rounded-2xl border border-purple-500/70 px-4 py-3 text-white font-semibold shadow-[0_0_20px_rgba(168,85,247,0.18)]"
             >
-              <SoundcheckIcon className="h-5 w-5" />
+              <span className="text-sm">🎧</span>
               <span>Soundcheck</span>
             </button>
 

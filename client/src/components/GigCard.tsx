@@ -223,25 +223,50 @@ export default function GigCard({
   });
 
   const soundcheckMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/soundchecks/${event.id}`, {
-        method: "POST",
-        credentials: "include",
-      });
+  mutationFn: async () => {
+    const res = await fetch(`/api/soundchecks/${event.id}`, {
+      method: "POST",
+      credentials: "include",
+    });
 
-      if (!res.ok) throw new Error("Failed to soundcheck");
-      return (await res.json()) as { soundchecked: boolean };
-    },
-    onSuccess: (data) => {
-      setSoundchecked(data.soundchecked);
-      toast({
-        title: data.soundchecked ? "Soundchecked" : "Soundcheck removed",
-      });
-    },
-    onError: () => {
-      toast({ title: "Soundcheck failed", description: "Try again in a sec." });
-    },
-  });
+    if (!res.ok) throw new Error("Failed to soundcheck");
+    return (await res.json()) as { soundchecked: boolean };
+  },
+
+  onMutate: async () => {
+    await queryClient.cancelQueries({ queryKey: ["/api/feed"] });
+
+    const previous = soundchecked;
+
+    setSoundchecked(!soundchecked);
+
+    return { previous };
+  },
+
+  onError: (_err, _vars, context) => {
+    if (context?.previous !== undefined) {
+      setSoundchecked(context.previous);
+    }
+
+    toast({
+      title: "Soundcheck failed",
+      description: "Try again in a sec.",
+    });
+  },
+
+  onSuccess: (data) => {
+    setSoundchecked(data.soundchecked);
+
+    toast({
+      title: data.soundchecked ? "Soundchecked" : "Soundcheck removed",
+    });
+  },
+
+  onSettled: async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "counts"] });
+  },
+});
 
   const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
@@ -369,8 +394,8 @@ export default function GigCard({
       className={[
         "flex-1 flex items-center justify-center gap-2 py-2 rounded-xl border transition-all font-medium",
         soundchecked
-          ? "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
-          : "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+            ? "bg-purple-600 text-white border-purple-400"
+            : "border-white/20 text-white/70 hover:bg-purple-500/20"
       ].join(" ")}
     >
       <span className="text-sm">🎧</span>
