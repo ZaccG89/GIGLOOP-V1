@@ -19,7 +19,7 @@ import express from "express";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { eq } from "drizzle-orm";
-import { spotifyAccounts } from "@shared/schema";
+import { spotifyAccounts, eventAttendance } from "@shared/schema";
 import { InsertUserArtist } from "@shared/schema";
 
 const COOKIE_NAME = "gigloop_session";
@@ -906,6 +906,58 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
       return res.status(500).json({ message: "Failed to fetch event" });
     }
   });
+
+  app.get("/api/events/:id/attendance", async (req: any, res: Response) => {
+  try {
+    const eventId = Number(req.params.id);
+
+    const attendees = await db
+      .select()
+      .from(eventAttendance)
+      .where(eq(eventAttendance.eventId, eventId));
+
+    const userId = req.userId ? Number(req.userId) : null;
+
+    const going = !!userId && attendees.some((a) => a.userId === userId);
+
+    res.json({
+      count: attendees.length,
+      going,
+    });
+  } catch (error) {
+    console.error("Error fetching attendance:", error);
+    res.status(500).json({ message: "Failed to fetch attendance" });
+  }
+});
+
+  app.get("/api/events/:id/counts", async (req: any, res) => {
+  try {
+    const eventId = req.params.id;
+
+    const counts = await storage.getEventCounts(eventId);
+
+    const attendees = await db
+      .select()
+      .from(eventAttendance)
+      .where(eq(eventAttendance.eventId, eventId));
+
+    const userId = req.userId ? Number(req.userId) : null;
+
+    const isGoing =
+      !!userId && attendees.some((a) => a.userId === userId);
+
+    res.json({
+      likes: counts.likes,
+      shares: counts.shares,
+      soundchecks: counts.soundchecks,
+      goingCount: attendees.length,
+      isGoing,
+    });
+  } catch (error) {
+    console.error("Error fetching event counts:", error);
+    res.status(500).json({ message: "Failed to fetch counts" });
+  }
+});
 
   app.get("/api/venue/my-profile", requireAuth, async (req: any, res: Response) => {
     const venue = await storage.getVenueByOwnerId(req.userId);
