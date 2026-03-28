@@ -51,6 +51,18 @@ export default function Settings() {
 
   const isGuest = !user;
 
+  const { data: spotifyStatus, isLoading: spotifyLoading } = useQuery({
+  queryKey: ["/api/auth/spotify/status"],
+  queryFn: async () => {
+    const res = await fetch("/api/auth/spotify/status", {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Failed to fetch Spotify status");
+    return res.json();
+  },
+  enabled: !!user,
+});
+
   const { data: myArtists = [] } = useQuery<UserArtist[]>({
     queryKey: ["/api/user/artists"],
     enabled: !!user, // don't fetch for guests
