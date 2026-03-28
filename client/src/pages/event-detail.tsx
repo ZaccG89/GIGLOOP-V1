@@ -3,9 +3,8 @@ import { Link, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Bookmark, Share2, Ticket, Music, MapPin } from "lucide-react";
-
+import { useMutation } from "@tanstack/react-query";
 
 type Counts = {
   likes?: number;
@@ -34,9 +33,9 @@ export default function EventDetail() {
     if (!res.ok) throw new Error("Failed to save");
     return (await res.json()) as { saved: boolean };
   },
-  onSuccess: (data) => {
-    setSaved(data.saved);
-  },
+  onSuccess: (data: { saved: boolean }) => {
+  setSaved(data.saved);
+},
 });
 
   const handleSave = (e: React.MouseEvent) => {
@@ -46,7 +45,6 @@ export default function EventDetail() {
   if (saveMutation.isPending) return;
   saveMutation.mutate();
 };
-  const queryClient = useQueryClient();
   const [saved, setSaved] = useState(false);
 
   const isAdmin =
@@ -68,7 +66,6 @@ export default function EventDetail() {
   const {
     guestLockOpen,
     setGuestLockOpen,
-    requireAuth,
   } = useGuestLock();
 
   const isGuest = useMemo(() => {
@@ -86,62 +83,7 @@ export default function EventDetail() {
   const [sharePending, setSharePending] = useState(false);
   const [soundcheckPending, setSoundcheckPending] = useState(false);
 
-  const { data: attendanceData } = useQuery({
-  queryKey: ["/api/events", eventId, "attendance"],
-  queryFn: async () => {
-    const res = await fetch(`/api/events/${eventId}/attendance`, {
-      credentials: "include",
-    });
-
-    if (!res.ok) throw new Error("Failed to load attendance");
-
-    return res.json();
-  },
-  enabled: !!eventId,
-});
-
-  const { data: goingData } = useQuery({
-    queryKey: ["/api/going", eventId, "me"],
-    queryFn: async () => {
-      const res = await fetch(`/api/going/${eventId}/me`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) return { going: false };
-
-      return res.json();
-    },
-    enabled: !!user,
-  });
-
-  const attendanceMutation = useMutation({
-  mutationFn: async () => {
-    const currentlyGoing = !!goingData?.going;
-    const method = currentlyGoing ? "DELETE" : "POST";
-
-    const res = await fetch(`/api/going/${eventId}`, {
-      method,
-      credentials: "include",
-    });
-
-    if (!res.ok) {
-      throw new Error("Attendance update failed");
-    }
-
-    return true;
-  },
-  onSuccess: () => {
-    queryClient.invalidateQueries({
-      queryKey: ["/api/events", eventId, "attendance"],
-    });
-    queryClient.invalidateQueries({
-      queryKey: ["/api/going", eventId, "me"],
-    });
-    queryClient.invalidateQueries({
-      queryKey: ["/api/feed"],
-    });
-  },
-});
+  
 
   useEffect(() => {
     let cancelled = false;
@@ -295,19 +237,7 @@ export default function EventDetail() {
     }
   }
 
-  function handleGoing(e: React.MouseEvent) {
-  e.preventDefault();
-  e.stopPropagation();
-
-  if (!requireAuth()) {
-    setGuestLockOpen(true);
-    return;
-  }
-
-  if (attendanceMutation.isPending) return;
-  attendanceMutation.mutate();
-}
-
+  
   if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
 
   if (notFound) {
