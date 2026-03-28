@@ -469,6 +469,100 @@ export default function Settings() {
         </div>
       </Card>
 
+            <Card className="p-6 md:p-8 mt-6">
+        <div className="flex items-center gap-3 mb-6">
+          <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+            <Music2 className="w-5 h-5 text-primary" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-white">Spotify</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">
+              Connect Spotify to sync your artists
+            </p>
+          </div>
+        </div>
+
+        <div className="max-w-lg">
+          {spotifyLoading ? (
+            <p className="text-sm text-muted-foreground">Checking Spotify connection...</p>
+          ) : spotifyStatus?.connected ? (
+            <div className="space-y-3">
+              <div className="flex items-center gap-2 text-sm text-green-400 font-medium">
+                <CheckCircle className="w-4 h-4" />
+                Connected to Spotify
+              </div>
+
+              <div className="flex flex-wrap gap-3">
+                <Button
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/spotify/sync-top-artists", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+
+                      const data = await res.json();
+
+                      if (!res.ok) {
+                        throw new Error(data?.message || "Sync failed");
+                      }
+
+                      toast({
+                        title: "Spotify synced",
+                        description: `${data.synced ?? 0} artists imported`,
+                      });
+
+                      queryClient.invalidateQueries({ queryKey: ["/api/user/artists"] });
+                    } catch (err: any) {
+                      toast({
+                        title: "Spotify sync failed",
+                        description: err.message,
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Sync Artists
+                </Button>
+
+                <Button
+                  variant="outline"
+                  onClick={async () => {
+                    try {
+                      const res = await fetch("/api/auth/spotify/disconnect", {
+                        method: "POST",
+                        credentials: "include",
+                      });
+
+                      if (!res.ok) {
+                        throw new Error("Disconnect failed");
+                      }
+
+                      toast({
+                        title: "Spotify disconnected",
+                      });
+
+                      queryClient.invalidateQueries({ queryKey: ["/api/auth/spotify/status"] });
+                    } catch {
+                      toast({
+                        title: "Could not disconnect Spotify",
+                        variant: "destructive",
+                      });
+                    }
+                  }}
+                >
+                  Disconnect
+                </Button>
+              </div>
+            </div>
+          ) : (
+            <Button onClick={() => window.location.href = "/api/auth/spotify/login"}>
+              Connect Spotify
+            </Button>
+          )}
+        </div>
+      </Card>
+
       <VenueAccountCard />
 
       <Card className="p-6 md:p-8 mt-6">
