@@ -558,9 +558,15 @@ export default function Settings() {
               </div>
             </div>
           ) : (
-            <Button onClick={() => window.location.href = "/api/auth/spotify/login"}>
-              Connect Spotify
-            </Button>
+            <Button
+  type="button"
+  onClick={(e) => {
+    e.preventDefault();
+    window.location.assign("/api/auth/spotify/login");
+  }}
+>
+  Connect Spotify
+</Button>
           )}
         </div>
       </Card>
