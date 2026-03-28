@@ -1,13 +1,10 @@
 import { useState, useCallback } from "react";
 import { Bookmark, Share2, Ticket, Music, Users } from "lucide-react";
 import { format } from "date-fns";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { useToast } from "@/hooks/use-toast";
+import { useMutation, useQueryClient } from "@tanstack/react-query";import { useToast } from "@/hooks/use-toast";
 import { useAuth } from "@/hooks/use-auth";
-import { SoundcheckIcon } from "./SoundcheckIcon";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
 import { Card } from "@/components/ui/card";
-import type { FeedItem } from "@/hooks/use-feed";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 
 interface GigCardProps {
@@ -76,113 +73,7 @@ export default function GigCard({
     }
   })();
 
-  const attendanceQueryKey = ["/api/events", event.id, "attendance"] as const;
-  const goingQueryKey = ["/api/going", event.id, "me"] as const;
-
-  const { data: attendanceData } = useQuery<AttendanceResponse>({
-    queryKey: attendanceQueryKey,
-    queryFn: async () => {
-      const res = await fetch(`/api/events/${event.id}/attendance`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to load attendance");
-      }
-
-      return res.json();
-    },
-  });
-
-  const { data: goingData } = useQuery<GoingResponse>({
-    queryKey: goingQueryKey,
-    queryFn: async () => {
-      const res = await fetch(`/api/going/${event.id}/me`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        return { going: false };
-      }
-
-      return res.json();
-    },
-    enabled: !!user,
-  });
-
-  const attendanceMutation = useMutation({
-    mutationFn: async (currentlyGoing: boolean) => {
-      const method = currentlyGoing ? "DELETE" : "POST";
-
-      const res = await fetch(`/api/going/${event.id}`, {
-        method,
-        credentials: "include",
-      });
-
-      if (!res.ok) {
-        throw new Error("Failed to update attendance");
-      }
-
-      return { going: !currentlyGoing };
-    },
-
-    onMutate: async (currentlyGoing: boolean) => {
-      await queryClient.cancelQueries({ queryKey: attendanceQueryKey });
-      await queryClient.cancelQueries({ queryKey: goingQueryKey });
-
-      const previousAttendance =
-        queryClient.getQueryData<AttendanceResponse>(attendanceQueryKey);
-      const previousGoing =
-        queryClient.getQueryData<GoingResponse>(goingQueryKey);
-
-      const nextGoing = !currentlyGoing;
-
-      queryClient.setQueryData<GoingResponse>(goingQueryKey, {
-        going: nextGoing,
-      });
-
-      queryClient.setQueryData<AttendanceResponse>(attendanceQueryKey, (old) => {
-        const currentCount = old?.count ?? 0;
-        const nextCount = nextGoing
-          ? currentCount + 1
-          : Math.max(0, currentCount - 1);
-
-        return {
-          count: nextCount,
-          attendees: old?.attendees ?? [],
-        };
-      });
-
-      return { previousAttendance, previousGoing, currentlyGoing };
-    },
-
-    onError: (_error, _variables, context) => {
-      if (context?.previousAttendance) {
-        queryClient.setQueryData(attendanceQueryKey, context.previousAttendance);
-      }
-      if (context?.previousGoing) {
-        queryClient.setQueryData(goingQueryKey, context.previousGoing);
-      }
-
-      toast({
-        title: "Attendance failed",
-        description: "Try again in a sec.",
-      });
-    },
-
-    onSuccess: (_data, currentlyGoing) => {
-      toast({
-        title: currentlyGoing ? "Removed from Going" : "You're going",
-      });
-    },
-
-    onSettled: async () => {
-      await queryClient.invalidateQueries({ queryKey: attendanceQueryKey });
-      await queryClient.invalidateQueries({ queryKey: goingQueryKey });
-      await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
-    },
-  });
-
+  
   const saveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/saves/${event.id}`, {
@@ -315,21 +206,7 @@ export default function GigCard({
   },
   [event.id, event.name, event.venueName, requireAuth, shareMutation, toast]
 );
-  const handleGoing = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (!requireAuth()) {
-      setGuestLockOpen(true);
-      return;
-    }
-
-    if (attendanceMutation.isPending) return;
-
-    const currentlyGoing = !!goingData?.going;
-    attendanceMutation.mutate(currentlyGoing);
-  };
-
+  
   const handleTickets = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
@@ -339,9 +216,7 @@ export default function GigCard({
     }
   };
 
-  const goingCount = attendanceData?.count ?? 0;
-  const isGoing = !!goingData?.going;
-
+ 
   return (
     <>
   <Card
@@ -407,8 +282,8 @@ export default function GigCard({
       className={[
         "flex-1 flex items-center justify-center py-2 rounded-xl border transition-all",
         saved
-          ? "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
-          : "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+          ? "bg-purple-600 text-white border-purple-400"
+            : "border-white/20 text-white/70 hover:bg-purple-500/20"
       ].join(" ")}
     >
       <Bookmark
@@ -422,8 +297,8 @@ export default function GigCard({
       className={[
         "flex-1 flex items-center justify-center py-2 rounded-xl border transition-all",
         shared
-          ? "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
-          : "border-purple-600/80 hover:bg-purple-500 text-white font-semibold border border-purple-400/20"
+          ? "bg-purple-600 text-white border-purple-400"
+            : "border-white/20 text-white/70 hover:bg-purple-500/20"
       ].join(" ")}
     >
       <Share2 className="h-5 w-5" />
