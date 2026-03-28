@@ -203,9 +203,10 @@ export class DatabaseStorage implements IStorage {
  async upsertSpotifyAccount(
   account: InsertSpotifyAccount
 ): Promise<SpotifyAccount> {
-  const existingBySpotifyUserId = await db.query.spotifyAccounts.findFirst({
-    where: eq(spotifyAccounts.spotifyUserId, account.spotifyUserId),
-  });
+  const [existingBySpotifyUserId] = await db
+    .select()
+    .from(spotifyAccounts)
+    .where(eq(spotifyAccounts.spotifyUserId, account.spotifyUserId));
 
   if (existingBySpotifyUserId) {
     const [updated] = await db
@@ -226,9 +227,10 @@ export class DatabaseStorage implements IStorage {
     return updated;
   }
 
-  const existingByUserId = await db.query.spotifyAccounts.findFirst({
-    where: eq(spotifyAccounts.userId, account.userId),
-  });
+  const [existingByUserId] = await db
+    .select()
+    .from(spotifyAccounts)
+    .where(eq(spotifyAccounts.userId, account.userId));
 
   if (existingByUserId) {
     const [updated] = await db
@@ -254,6 +256,7 @@ export class DatabaseStorage implements IStorage {
     .returning();
 
   return created;
+
 }
   async getAppleAccount(userId: string): Promise<AppleAccount | undefined> {
     const [account] = await db
@@ -274,22 +277,18 @@ export class DatabaseStorage implements IStorage {
     if (!account) return undefined;
     return this.getUser(account.userId);
   }
-
   async upsertAppleAccount(account: InsertAppleAccount): Promise<AppleAccount> {
-    const [upserted] = await db
-      .insert(appleAccounts)
-      .values(account)
-      .onConflictDoUpdate({
-        target: appleAccounts.userId,
-        set: {
-          musicUserToken: account.musicUserToken,
-          updatedAt: new Date(),
-        },
-      })
-      .returning();
+  const [upserted] = await db
+    .insert(appleAccounts)
+    .values(account)
+    .onConflictDoUpdate({
+      target: appleAccounts.userId,
+      set: account,
+    })
+    .returning();
 
-    return upserted;
-  }
+  return upserted;
+}
 
   async getUserArtists(userId: string): Promise<UserArtist[]> {
     return await db
