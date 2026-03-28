@@ -473,7 +473,7 @@ export async function registerRoutes(
   const code = req.query.code as string;
 
   if (!code) {
-    return res.redirect("/settings?error=spotify_auth_failed");
+    return res.redirect("/?error=spotify_auth_failed");
   }
 
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
@@ -501,7 +501,7 @@ export async function registerRoutes(
 
     if (!tokenData.access_token) {
       console.error("Spotify token failed:", tokenData);
-      return res.redirect("/settings?error=spotify_token_failed");
+      return res.redirect("/?error=spotify_token_failed");
     }
 
     // 🔹 PROFILE
@@ -514,8 +514,7 @@ export async function registerRoutes(
     const profile = await profileRes.json();
 
     if (!profile?.id) {
-      return res.redirect("/settings?error=spotify_profile_failed");
-    }
+    return res.redirect("/?error=spotify_profile_failed");    }
 
     // 🔹 USER RESOLUTION
     const currentUserId = await getOptionalUserId(req);
@@ -562,7 +561,7 @@ export async function registerRoutes(
     return res.redirect("/");
   } catch (err) {
     console.error("Spotify callback crash:", err);
-    return res.redirect("/settings?error=spotify_crash");
+    return res.redirect("/?error=spotify_crash");
   }
 });
 
