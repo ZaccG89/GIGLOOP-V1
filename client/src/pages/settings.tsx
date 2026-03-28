@@ -61,6 +61,8 @@ export default function Settings() {
     return res.json();
   },
   enabled: !!user,
+  refetchOnMount: true,
+  refetchOnWindowFocus: true,
 });
 
   const { data: myArtists = [] } = useQuery<UserArtist[]>({
