@@ -147,15 +147,44 @@ useEffect(() => {
   runAdminVenueSearch();
 }, [adminVenueQuery]);
 
-  const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
-  const approve = useApproveSubmission(activeSecret);
+const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);  const approve = useApproveSubmission(activeSecret);
   const reject = useRejectSubmission(activeSecret);
 
-  const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues(activeSecret);
-  const approveVenue = useApproveVenue(activeSecret);
+const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admin123");  const approveVenue = useApproveVenue(activeSecret);
   const rejectVenue = useRejectVenue(activeSecret);
   
   const queryClient = useQueryClient();
+  
+  const saveVenue = useMutation({
+  mutationFn: async () => {
+    const res = await fetch("/api/admin/venues/upsert", {
+      method: "POST",
+      credentials: "include",
+      headers: {
+        "Content-Type": "application/json",
+        "x-admin-secret": "admin123",
+      },
+      body: JSON.stringify({
+        id: selectedVenueId || undefined,
+        ...venueForm,
+        lat: venueForm.lat ? Number(venueForm.lat) : undefined,
+        lng: venueForm.lng ? Number(venueForm.lng) : undefined,
+      }),
+    });
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to save venue");
+    }
+
+    return data;
+  },
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/admin/venues/all"] });
+    alert("Venue saved");
+  },
+});
 
 const createEvent = useMutation({
   mutationFn: async () => {
@@ -471,13 +500,110 @@ const createEvent = useMutation({
       value={venueForm.bio}
       onChange={(e) => setVenueForm({ ...venueForm, bio: e.target.value })}
       placeholder="Venue bio"
+      
     />
+    </div>
+
+  <div className="md:col-span-2 pt-2">
+    <Button
+      onClick={() => saveVenue.mutate()}
+      disabled={saveVenue.isPending || !venueForm.name}
+    >
+      {saveVenue.isPending ? "Saving..." : "Save Venue"}
+    </Button>
   </div>
 </div>
 
     </div>
 </Card>
-          <div className="flex gap-2 mb-6">
+
+<Card className="p-6 mb-6 border-primary/20">
+  <div className="space-y-4">
+    <div>
+      <h2 className="text-xl font-bold text-white">Create Event</h2>
+      <p className="text-sm text-muted-foreground">
+        Add gigs directly into GigLoop for manual seeding.
+      </p>
+    </div>
+
+    <div className="grid gap-4 md:grid-cols-2">
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Event Name</label>
+        <Input
+          value={form.name}
+          onChange={(e) => setForm({ ...form, name: e.target.value })}
+          placeholder="Band / Event name"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Start Time</label>
+        <Input
+          type="datetime-local"
+          value={form.startTime}
+          onChange={(e) => setForm({ ...form, startTime: e.target.value })}
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
+        <Input
+          value={form.venueName}
+          onChange={(e) => setForm({ ...form, venueName: e.target.value })}
+          placeholder="Venue name"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Ticket URL</label>
+        <Input
+          value={form.ticketUrl}
+          onChange={(e) => setForm({ ...form, ticketUrl: e.target.value })}
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">Image URL</label>
+        <Input
+          value={form.imageUrl}
+          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
+          placeholder="https://..."
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">City</label>
+        <Input
+          value={form.city}
+          onChange={(e) => setForm({ ...form, city: e.target.value })}
+          placeholder="Brisbane"
+        />
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">State</label>
+        <Input
+          value={form.state}
+          onChange={(e) => setForm({ ...form, state: e.target.value })}
+          placeholder="QLD"
+        />
+      </div>
+    </div>
+
+    <div className="pt-2">
+      <Button
+        onClick={() => createEvent.mutate()}
+        disabled={createEvent.isPending || !form.name || !form.startTime || !form.venueName}
+        className="w-full md:w-auto"
+      >
+        {createEvent.isPending ? "Creating..." : "Create Event"}
+      </Button>
+    </div>
+  </div>
+</Card>
+
+<div className="flex gap-2 mb-6">
             <button
               onClick={() => setTab("gigs")}
               data-testid="tab-gigs"
