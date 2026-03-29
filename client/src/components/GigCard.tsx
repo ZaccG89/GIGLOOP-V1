@@ -125,8 +125,8 @@ export default function GigCard({
       if (!res.ok) throw new Error("Failed to share");
       return (await res.json()) as { shared: boolean };
     },
-    onSuccess: () => {
-  queryClient.invalidateQueries({
+    onSuccess: async () => {
+  await queryClient.invalidateQueries({
     queryKey: ["/api/events", event.id, "counts"],
   });
 },
@@ -146,37 +146,21 @@ export default function GigCard({
     return (await res.json()) as { soundchecked: boolean };
   },
 
-  onMutate: async () => {
-    await queryClient.cancelQueries({ queryKey: ["/api/feed"] });
-
-    const previous = soundchecked;
-
-
-    return { previous };
-  },
-
-  onError: (_err, _vars, context) => {
-    if (context?.previous !== undefined) {
-    
-    }
-
+  onError: () => {
     toast({
       title: "Soundcheck failed",
       description: "Try again in a sec.",
     });
   },
 
-  onSuccess: (data) => {
-    
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({
+      queryKey: ["/api/events", event.id, "counts"],
+    });
 
     toast({
-      title: data.soundchecked ? "Soundchecked" : "Soundcheck removed",
+      title: "Soundcheck updated",
     });
-  },
-
-  onSettled: async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
-    await queryClient.invalidateQueries({ queryKey: ["/api/events", event.id, "counts"] });
   },
 });
 
