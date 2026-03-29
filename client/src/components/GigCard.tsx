@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useCallback } from "react";
 import { Bookmark, Share2, Ticket, Music, Users } from "lucide-react";
 import { format } from "date-fns";
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
@@ -44,10 +44,28 @@ export default function GigCard({
   const { data: user } = useAuth();
 
   const { guestLockOpen, setGuestLockOpen, requireAuth } = useGuestLock();
+  const { data: countsData } = useQuery<{
 
-  const [saved, setSaved] = useState(initialSaved);
-  const [shared, setShared] = useState(initialShared);
-  const [soundchecked, setSoundchecked] = useState(initialSoundchecked);
+  saveCount: number;
+  shareCount: number;
+  soundcheckCount: number;
+  saved: boolean;
+  shared: boolean;
+  soundchecked: boolean;
+}>({
+  queryKey: ["/api/events", event.id, "counts"],
+  queryFn: async () => {
+    const res = await fetch(`/api/events/${event.id}/counts`, {
+      credentials: "include",
+    });
+    if (!res.ok) throw new Error("Failed to fetch counts");
+    return res.json();
+  },
+});
+  const saved = countsData?.saved ?? initialSaved;
+  const shared = countsData?.shared ?? initialShared;
+  const soundchecked = countsData?.soundchecked ?? initialSoundchecked;
+  
 
   const isMatch = matchScore > 0;
   const matchReason =
@@ -74,6 +92,8 @@ export default function GigCard({
   })();
 
   
+
+  
   const saveMutation = useMutation({
     mutationFn: async () => {
       const res = await fetch(`/api/saves/${event.id}`, {
@@ -84,11 +104,11 @@ export default function GigCard({
       if (!res.ok) throw new Error("Failed to save");
       return (await res.json()) as { saved: boolean };
     },
-    onSuccess: (data) => {
-      setSaved(data.saved);
-      queryClient.invalidateQueries({ queryKey: ["/api/saves"] });
-      queryClient.invalidateQueries({ queryKey: ["/api/saves/events"] });
-      toast({ title: data.saved ? "Saved!" : "Removed from saved" });
+    onSuccess: () => {
+  queryClient.invalidateQueries({
+    queryKey: ["/api/events", event.id, "counts"],
+  });
+      toast({ title: "Saved updated" });
     },
     onError: () => {
       toast({ title: "Save failed", description: "Try again in a sec." });
@@ -105,9 +125,11 @@ export default function GigCard({
       if (!res.ok) throw new Error("Failed to share");
       return (await res.json()) as { shared: boolean };
     },
-    onSuccess: (data) => {
-      setShared(data.shared);
-    },
+    onSuccess: () => {
+  queryClient.invalidateQueries({
+    queryKey: ["/api/events", event.id, "counts"],
+  });
+},
     onError: () => {
       toast({ title: "Share failed", description: "Try again in a sec." });
     },
@@ -129,14 +151,13 @@ export default function GigCard({
 
     const previous = soundchecked;
 
-    setSoundchecked(!soundchecked);
 
     return { previous };
   },
 
   onError: (_err, _vars, context) => {
     if (context?.previous !== undefined) {
-      setSoundchecked(context.previous);
+    
     }
 
     toast({
@@ -146,7 +167,7 @@ export default function GigCard({
   },
 
   onSuccess: (data) => {
-    setSoundchecked(data.soundchecked);
+    
 
     toast({
       title: data.soundchecked ? "Soundchecked" : "Soundcheck removed",
