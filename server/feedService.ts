@@ -56,7 +56,7 @@ export async function buildFeedForUser(userId?: string | null) {
 
       return distanceKm <= radius;
     })
-    .slice(0, 80)
+    .slice(0, 300)
     .map((event) => ({
       ...event,
       matchScore: 0,
