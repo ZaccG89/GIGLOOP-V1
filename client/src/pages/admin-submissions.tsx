@@ -66,6 +66,8 @@ export default function AdminSubmissions() {
 const [venueQuery, setVenueQuery] = useState("");
 const [venueResults, setVenueResults] = useState<Venue[]>([]);
 const [venueSearchLoading, setVenueSearchLoading] = useState(false);
+const [adminVenueQuery, setAdminVenueQuery] = useState("");
+const [adminVenueResults, setAdminVenueResults] = useState<Venue[]>([]);
 
 useEffect(() => {
   const runVenueSearch = async () => {
@@ -98,6 +100,37 @@ useEffect(() => {
 
   runVenueSearch();
 }, [venueQuery]);
+
+useEffect(() => {
+  const runAdminVenueSearch = async () => {
+    if (adminVenueQuery.trim().length < 2) {
+      setAdminVenueResults([]);
+      return;
+    }
+
+    try {
+      const res = await fetch(
+        `/api/admin/venues/all?q=${encodeURIComponent(adminVenueQuery.trim())}`,
+        {
+          headers: { "x-admin-secret": "admin123" },
+          credentials: "include",
+        }
+      );
+
+      if (!res.ok) {
+        setAdminVenueResults([]);
+        return;
+      }
+
+      const data = await res.json();
+      setAdminVenueResults(Array.isArray(data) ? data : []);
+    } catch {
+      setAdminVenueResults([]);
+    }
+  };
+
+  runAdminVenueSearch();
+}, [adminVenueQuery]);
 
   const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);
   const approve = useApproveSubmission(activeSecret);
@@ -235,6 +268,44 @@ const createEvent = useMutation({
         </Card>
       ) : (
         <>
+        <Card className="p-6 mb-6 border-primary/20">
+  <div className="space-y-4">
+    <div>
+      <h2 className="text-xl font-bold text-white">Manage Venues</h2>
+      <p className="text-sm text-muted-foreground">
+        Search and edit existing venues or create new ones.
+      </p>
+    </div>
+
+    <Input
+      value={adminVenueQuery}
+      onChange={(e) => setAdminVenueQuery(e.target.value)}
+      placeholder="Search venues..."
+    />
+
+    {adminVenueQuery.trim().length >= 2 && (
+      <div className="rounded-xl border border-white/10 bg-[#0b1020] overflow-hidden">
+        {adminVenueResults.length === 0 ? (
+          <div className="px-4 py-3 text-sm text-white/70">
+            No venues found
+          </div>
+        ) : (
+          adminVenueResults.map((venue) => (
+            <div
+              key={venue.id}
+              className="px-4 py-3 border-b border-white/5 last:border-b-0"
+            >
+              <div className="font-medium text-white">{venue.name}</div>
+              <div className="text-xs text-white/60">
+                {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
+              </div>
+            </div>
+          ))
+        )}
+      </div>
+    )}
+  </div>
+</Card>
           {/* Tabs */}
           <Card className="p-6 mb-6 border-primary/20">
   <div className="space-y-4">
