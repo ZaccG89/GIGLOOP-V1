@@ -1119,6 +1119,61 @@ const sessionToken = await createSession(userId);
   }
 });
 
+app.post("/api/admin/venues/upsert", requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await storage.getUser(req.userId);
+
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const {
+      id,
+      name,
+      address,
+      suburb,
+      city,
+      state,
+      postcode,
+      website,
+      instagram,
+      contactEmail,
+      bio,
+      lat,
+      lng,
+    } = req.body;
+
+    if (!name?.trim()) {
+      return res.status(400).json({ message: "Venue name is required" });
+    }
+
+    const venue = await storage.upsertVenue({
+      id: id || undefined, // ← important (new vs update)
+      name: name.trim(),
+      address,
+      suburb,
+      city,
+      state,
+      postcode,
+      website,
+      instagram,
+      contactEmail,
+      bio,
+      lat,
+      lng,
+    });
+
+    return res.json(venue);
+  } catch (err) {
+    console.error("UPSERT VENUE ERROR:", err);
+    return res.status(500).json({ message: "Failed to upsert venue" });
+  }
+});
+
    app.delete("/api/admin/events/:id", requireAuth, async (req: any, res: Response) => {
   try {
     const user = await storage.getUser(req.userId);
