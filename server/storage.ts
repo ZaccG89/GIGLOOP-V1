@@ -116,8 +116,8 @@ export interface IStorage {
   getUserSavedEvents(userId: string): Promise<Event[]>;
   getUserLikedEvents(userId: string): Promise<Event[]>;
   getEventCounts(
-    eventId: string
-  ): Promise<{ likes: number; shares: number; soundchecks: number }>;
+  eventId: string
+  ): Promise<{ saves: number; shares: number; soundchecks: number }>;
 
   // Profile
   updateUserProfile(
@@ -854,6 +854,7 @@ async deleteEvent(eventId: string): Promise<void> {
     for (const row of rows) {
       const follower = await this.getUser(row.followerId);
       if (follower) result.push({ ...row, follower });
+
     }
 
     return result;
@@ -886,35 +887,36 @@ async deleteEvent(eventId: string): Promise<void> {
     for (const row of rows) {
       const follower = await this.getUser(row.followerId);
       if (follower) result.push({ ...row, follower });
+
     }
 
     return result;
   }
 
   async getEventCounts(
-    eventId: string
-  ): Promise<{ likes: number; shares: number; soundchecks: number }> {
-    const [likesRow] = await db
-      .select({ n: count() })
-      .from(userLikes)
-      .where(eq(userLikes.eventId, eventId));
+  eventId: string
+): Promise<{ saves: number; shares: number; soundchecks: number }> {
+  const [savesRow] = await db
+    .select({ n: count() })
+    .from(userSaves)
+    .where(eq(userSaves.eventId, eventId));
 
-    const [sharesRow] = await db
-      .select({ n: count() })
-      .from(userShares)
-      .where(eq(userShares.eventId, eventId));
+  const [sharesRow] = await db
+    .select({ n: count() })
+    .from(userShares)
+    .where(eq(userShares.eventId, eventId));
 
-    const [soundRow] = await db
-      .select({ n: count() })
-      .from(userSoundchecks)
-      .where(eq(userSoundchecks.eventId, eventId));
+  const [soundRow] = await db
+    .select({ n: count() })
+    .from(userSoundchecks)
+    .where(eq(userSoundchecks.eventId, eventId));
 
-    return {
-      likes: Number(likesRow?.n ?? 0),
-      shares: Number(sharesRow?.n ?? 0),
-      soundchecks: Number(soundRow?.n ?? 0),
-    };
-  }
+  return {
+    saves: Number(savesRow?.n ?? 0),
+    shares: Number(sharesRow?.n ?? 0),
+    soundchecks: Number(soundRow?.n ?? 0),
+  };
+
 }
-
+}
 export const storage = new DatabaseStorage();

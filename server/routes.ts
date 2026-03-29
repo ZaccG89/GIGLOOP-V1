@@ -1,6 +1,7 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
-import { DatabaseStorage } from "./storage";import { api } from "@shared/routes";
+import { storage } from "./storage";
+import { api } from "@shared/routes";
 import { z } from "zod";
 import { requireAuth, createSession, verifySession } from "./auth";
 import { refreshSpotifyToken } from "./spotify";
@@ -19,14 +20,13 @@ import bcrypt from "bcryptjs";
 import { db } from "./db";
 import { eq, and } from "drizzle-orm";
 import { spotifyAccounts, eventAttendance } from "@shared/schema";
-import { InsertUserArtist } from "@shared/schema";
+import type { InsertUserArtist } from "@shared/schema";
 import {
   userSaves,
   userShares,
   userSoundchecks,
 } from "@shared/schema";
 
-const storage = new DatabaseStorage();
 
 const COOKIE_NAME = "gigloop_session";
 
@@ -77,9 +77,9 @@ function setSessionCookie(res: Response, sessionToken: string) {
 }
 
 export async function registerRoutes(
-  httpServer: Server,
-  app: Express
-) {
+  app: Express,
+  httpServer: Server
+): Promise<Server> {
   app.use(cookieParser());
   app.use("/uploads", express.static(path.resolve("uploads")));
 
@@ -717,10 +717,13 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
         }
       }
 
-      await storage.upsertAppleAccount({ userId, musicUserToken });
+      if (!userId) {
+  return res.status(500).json({ message: "Failed to resolve user" });
+}
 
-      const sessionToken = await createSession(userId);
-      setSessionCookie(res, sessionToken);
+await storage.upsertAppleAccount({ userId, musicUserToken });
+
+const sessionToken = await createSession(userId);
 
       return res.json({ success: true });
     } catch (e: any) {
@@ -1394,4 +1397,6 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
     return res.json(ids);
   });
 
+
+ return httpServer;
 }
