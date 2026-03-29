@@ -454,6 +454,10 @@ export class DatabaseStorage implements IStorage {
       .limit(700);
   }
 
+   async deleteVenue(id: string) {
+  await db.delete(venues).where(eq(venues.id, id));
+}
+
   async getEventsByVenueName(
     venueName: string,
     days = 42

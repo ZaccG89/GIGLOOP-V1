@@ -1166,6 +1166,28 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
   }
 });
 
+   app.delete("/api/admin/venues/:id", requireAuth, async (req, res) => {
+  try {
+    if (req.headers["x-admin-secret"] !== "admin123") {
+      return res.status(403).json({ message: "Forbidden" });
+    }
+
+    const id = getParam((req.params as any).id);
+
+    const existing = await storage.getVenue(id);
+    if (!existing) {
+      return res.status(404).json({ message: "Venue not found" });
+    }
+
+    await storage.deleteVenue(id);
+
+    return res.json({ success: true });
+  } catch (err) {
+    console.error("Delete venue error:", err);
+    return res.status(500).json({ message: "Failed to delete venue" });
+  }
+});
+
    app.delete("/api/admin/events/:id", requireAuth, async (req: any, res: Response) => {
   try {
     const user = await storage.getUser(req.userId);
