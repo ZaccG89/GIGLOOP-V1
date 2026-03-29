@@ -27,6 +27,7 @@ import {
   userSoundchecks,
 } from "@shared/schema";
 
+
 const COOKIE_NAME = "gigloop_session";
 
 const cookieOptions = {
@@ -938,7 +939,14 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
   app.get("/api/events/:id/counts", async (req: any, res) => {
   try {
     const eventId = req.params.id;
-    const userId = req.userId;
+
+    const token =
+      req.cookies?.gigloop_session ||
+      req.cookies?.GigLoop_session ||
+      req.cookies?.giggity_session ||
+      req.cookies?.Giggity_session;
+
+    const userId = token ? await verifySession(token) : null;
 
     const counts = await storage.getEventCounts(eventId);
 
@@ -960,7 +968,12 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
       const soundchecks = await db
         .select()
         .from(userSoundchecks)
-        .where(and(eq(userSoundchecks.userId, userId), eq(userSoundchecks.eventId, eventId)));
+        .where(
+          and(
+            eq(userSoundchecks.userId, userId),
+            eq(userSoundchecks.eventId, eventId)
+          )
+        );
 
       saved = saves.length > 0;
       shared = shares.length > 0;
