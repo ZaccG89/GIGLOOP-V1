@@ -1,7 +1,6 @@
 import type { Express, Request, Response, NextFunction } from "express";
 import { type Server } from "http";
-import { storage } from "./storage";
-import { api } from "@shared/routes";
+import { DatabaseStorage } from "./storage";import { api } from "@shared/routes";
 import { z } from "zod";
 import { requireAuth, createSession, verifySession } from "./auth";
 import { refreshSpotifyToken } from "./spotify";
@@ -27,6 +26,7 @@ import {
   userSoundchecks,
 } from "@shared/schema";
 
+const storage = new DatabaseStorage();
 
 const COOKIE_NAME = "gigloop_session";
 
@@ -981,13 +981,13 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
     }
 
     res.json({
-      saveCount: counts.likes,
-      shareCount: counts.shares,
-      soundcheckCount: counts.soundchecks,
-      saved,
-      shared,
-      soundchecked,
-    });
+    saveCount: counts.saves,
+    shareCount: counts.shares,
+    soundcheckCount: counts.soundchecks,
+    saved,
+    shared,
+    soundchecked,
+});
   } catch (error) {
     console.error("Error fetching event counts:", error);
     res.status(500).json({ message: "Failed to fetch counts" });
