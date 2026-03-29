@@ -3,13 +3,16 @@ import { Link, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
-import { Bookmark, Share2, Ticket, Music, MapPin } from "lucide-react";
+import { Bookmark, Share2, MapPin } from "lucide-react";
 import { useMutation } from "@tanstack/react-query";
 
 type Counts = {
-  likes?: number;
-  shares?: number;
-  soundchecks?: number;
+  saveCount?: number;
+  shareCount?: number;
+  soundcheckCount?: number;
+  saved?: boolean;
+  shared?: boolean;
+  soundchecked?: boolean;
 };
 
 function fmtDateTime(v: any) {
@@ -23,45 +26,16 @@ export default function EventDetail() {
   const [, params] = useRoute("/events/:id");
   const { data: user } = useAuth() as { data: any };
   const eventId = params?.id as string;
-  const saveMutation = useMutation({
-  mutationFn: async () => {
-    const res = await fetch(`/api/saves/${eventId}`, {
-      method: "POST",
-      credentials: "include",
-    });
 
-    if (!res.ok) throw new Error("Failed to save");
-    return (await res.json()) as { saved: boolean };
-  },
-  onSuccess: (data: { saved: boolean }) => {
-  setSaved(data.saved);
-},
-});
+  const [loading, setLoading] = useState(true);
+  const [notFound, setNotFound] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleSave = (e: React.MouseEvent) => {
-  e.preventDefault();
-  e.stopPropagation();
+  const [event, setEvent] = useState<any>(null);
+  const [counts, setCounts] = useState<Counts>({});
 
-  if (saveMutation.isPending) return;
-  saveMutation.mutate();
-};
-  const [saved, setSaved] = useState(false);
-
-  const isAdmin =
-    typeof user?.email === "string" &&
-    user.email.toLowerCase().includes("admin");
-
-  const handleDelete = async () => {
-    if (!isAdmin) return;
-    if (!confirm("Delete this event?")) return;
-
-    await fetch(`/api/admin/events/${event.id}`, {
-      method: "DELETE",
-      credentials: "include",
-    });
-
-    window.location.href = "/";
-  };
+  const [sharePending, setSharePending] = useState(false);
+  const [soundcheckPending, setSoundcheckPending] = useState(false);
 
   const {
     guestLockOpen,
@@ -72,66 +46,9 @@ export default function EventDetail() {
     return !user || (user as any)?.role === "guest" || !(user as any)?.email;
   }, [user]);
 
-  const [loading, setLoading] = useState(true);
-  const [notFound, setNotFound] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const [event, setEvent] = useState<any>(null);
-  const [counts, setCounts] = useState<Counts>({});
-
-  const [likePending, setLikePending] = useState(false);
-  const [sharePending, setSharePending] = useState(false);
-  const [soundcheckPending, setSoundcheckPending] = useState(false);
-
-  
-
-  useEffect(() => {
-    let cancelled = false;
-
-    async function run() {
-      try {
-        const res = await fetch(`/api/events/${eventId}`, {
-          credentials: "include",
-        });
-
-        if (cancelled) return;
-
-        if (res.status === 404) {
-          setNotFound(true);
-          setLoading(false);
-          return;
-        }
-
-                if (!res.ok) {
-          throw new Error(`Failed to load event (${res.status})`);
-        }
-
-        const contentType = res.headers.get("content-type") || "";
-
-        if (!contentType.includes("application/json")) {
-          const text = await res.text();
-          throw new Error(
-            `Event API returned non-JSON for /api/events/${eventId}: ${text.slice(0, 120)}`
-          );
-        }
-
-        const data = await res.json();
-        setEvent(data.event ?? data);
-        setCounts(data.counts ?? {});
-        setLoading(false);
-      } catch (e: any) {
-        if (cancelled) return;
-        setError(e?.message || "Failed to load event");
-        setLoading(false);
-      }
-    }
-
-    if (eventId) run();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [eventId]);
+  const isAdmin =
+    typeof user?.email === "string" &&
+    user.email.toLowerCase().includes("admin");
 
   async function refreshCounts() {
     try {
@@ -146,7 +63,22 @@ export default function EventDetail() {
     } catch {}
   }
 
-  async function handleLike(e: React.MouseEvent) {
+  const saveMutation = useMutation({
+    mutationFn: async () => {
+      const res = await fetch(`/api/saves/${eventId}`, {
+        method: "POST",
+        credentials: "include",
+      });
+
+      if (!res.ok) throw new Error("Failed to save");
+      return (await res.json()) as { saved: boolean };
+    },
+    onSuccess: async () => {
+      await refreshCounts();
+    },
+  });
+
+  const handleSave = (e: React.MouseEvent) => {
     e.preventDefault();
     e.stopPropagation();
 
@@ -155,23 +87,81 @@ export default function EventDetail() {
       return;
     }
 
-    if (likePending) return;
+    if (saveMutation.isPending) return;
+    saveMutation.mutate();
+  };
 
-    try {
-      setLikePending(true);
+  const handleDelete = async () => {
+    if (!isAdmin || !event?.id) return;
+    if (!confirm("Delete this event?")) return;
 
-      const res = await fetch(`/api/likes/${eventId}`, {
-        method: "POST",
-        credentials: "include",
-      });
+    await fetch(`/api/admin/events/${event.id}`, {
+      method: "DELETE",
+      credentials: "include",
+    });
 
-      if (!res.ok) throw new Error("Failed to like event");
+    window.location.href = "/";
+  };
 
-      await refreshCounts();
-    } finally {
-      setLikePending(false);
+  useEffect(() => {
+    let cancelled = false;
+
+    async function run() {
+      try {
+        const eventRes = await fetch(`/api/events/${eventId}`, {
+          credentials: "include",
+        });
+
+        if (cancelled) return;
+
+        if (eventRes.status === 404) {
+          setNotFound(true);
+          setLoading(false);
+          return;
+        }
+
+        if (!eventRes.ok) {
+          throw new Error(`Failed to load event (${eventRes.status})`);
+        }
+
+        const contentType = eventRes.headers.get("content-type") || "";
+
+        if (!contentType.includes("application/json")) {
+          const text = await eventRes.text();
+          throw new Error(
+            `Event API returned non-JSON for /api/events/${eventId}: ${text.slice(0, 120)}`
+          );
+        }
+
+        const eventData = await eventRes.json();
+
+        if (cancelled) return;
+
+        setEvent(eventData.event ?? eventData);
+
+        const countsRes = await fetch(`/api/events/${eventId}/counts`, {
+          credentials: "include",
+        });
+
+        if (!cancelled && countsRes.ok) {
+          const countsData = await countsRes.json();
+          setCounts(countsData ?? {});
+        }
+
+        setLoading(false);
+      } catch (e: any) {
+        if (cancelled) return;
+        setError(e?.message || "Failed to load event");
+        setLoading(false);
+      }
     }
-  }
+
+    if (eventId) run();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [eventId]);
 
   async function handleSoundcheck(e: React.MouseEvent) {
     e.preventDefault();
@@ -237,7 +227,6 @@ export default function EventDetail() {
     }
   }
 
-  
   if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
 
   if (notFound) {
@@ -274,175 +263,176 @@ export default function EventDetail() {
   const state = event?.state;
   const startTime = event?.startTime;
 
+  const saveCount = counts?.saveCount ?? 0;
+  const shareCount = counts?.shareCount ?? 0;
+  const soundcheckCount = counts?.soundcheckCount ?? 0;
+
+  const saved = !!counts?.saved;
+  const shared = !!counts?.shared;
+  const soundchecked = !!counts?.soundchecked;
+
   return (
     <>
-  <div className="max-w-[900px] mx-auto p-4">
+      <div className="max-w-[900px] mx-auto p-4">
+        <Link href="/" className="text-white/60 mb-3 block">
+          ← Back
+        </Link>
 
-    <Link href="/" className="text-white/60 mb-3 block">
-      ← Back
-    </Link>
+        <div className="relative h-[240px] w-full overflow-hidden rounded-2xl">
+          <img
+            src={imageUrl || "/placeholder.jpg"}
+            className="w-full h-full object-cover"
+          />
 
-    {/* IMAGE */}
-    <div className="relative h-[240px] w-full overflow-hidden rounded-2xl">
-      <img
-        src={imageUrl || "/placeholder.jpg"}
-        className="w-full h-full object-cover"
-      />
+          <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
 
-      <div className="absolute inset-0 bg-gradient-to-t from-black via-black/40 to-transparent" />
-
-      {(venueName || city) && (
-        <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
-          {[venueName, city].filter(Boolean).join(" • ")}
-        </div>
-      )}
-    </div>
-
-          {/* CONTENT */}
-      <div className="mt-5 space-y-4">
-        <div className="space-y-2">
-          <h1 className="text-2xl font-bold tracking-tight text-white">
-            {title}
-          </h1>
-
-          {venueName && (
-            <p className="text-white/75 text-lg">
-              {venueName}
-            </p>
+          {(venueName || city) && (
+            <div className="absolute bottom-3 right-3 px-3 py-1 text-xs bg-black/60 rounded-full">
+              {[venueName, city].filter(Boolean).join(" • ")}
+            </div>
           )}
-
-          <p className="text-white/55 text-sm">
-            {fmtDateTime(startTime)}
-          </p>
         </div>
 
-        {/* ACTIONS */}
-        <div className="space-y-3">
-          <div className="grid grid-cols-3 gap-3">
-            <button
-              onClick={handleSoundcheck}
-              className="flex items-center justify-center gap-2 rounded-2xl border border-purple-500/70 px-4 py-3 text-white font-semibold shadow-[0_0_20px_rgba(168,85,247,0.18)]"
-            >
-              <span className="text-sm">🎧</span>
-              <span>Soundcheck</span>
-            </button>
+        <div className="mt-5 space-y-4">
+          <div className="space-y-2">
+            <h1 className="text-2xl font-bold tracking-tight text-white">
+              {title}
+            </h1>
 
-            <button
-              onClick={handleSave}
-              className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
-               >
-             <Bookmark className="h-5 w-5" fill={saved ? "currentColor" : "none"} />
-             </button>
+            {venueName && (
+              <p className="text-white/75 text-lg">
+                {venueName}
+              </p>
+            )}
 
-            <button
-              onClick={handleShare}
-              className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
-            >
-              <Share2 className="h-5 w-5" />
-            </button>
+            <p className="text-white/55 text-sm">
+              {fmtDateTime(startTime)}
+            </p>
           </div>
 
-          {/* VENUE INFO */}
-          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
-            <div>
-              <p className="text-xs uppercase tracking-[0.16em] text-white/45">
-                Venue
-              </p>
-              <p className="mt-1 text-white font-medium">
-                {venueName || "Venue TBC"}
-              </p>
-              <p className="mt-1 text-sm text-white/55">
-                {[event?.address, event?.suburb, city, state, event?.postcode]
-                  .filter(Boolean)
-                  .join(", ") || "Location details coming soon"}
-              </p>
+          <div className="space-y-3">
+            <div className="grid grid-cols-3 gap-3">
+              <button
+                onClick={handleSoundcheck}
+                className="flex items-center justify-center gap-2 rounded-2xl border border-purple-500/70 px-4 py-3 text-white font-semibold shadow-[0_0_20px_rgba(168,85,247,0.18)]"
+              >
+                <span className="text-sm">🎧</span>
+                <span>Soundcheck</span>
+              </button>
+
+              <button
+                onClick={handleSave}
+                className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
+              >
+                <Bookmark className="h-5 w-5" fill={saved ? "currentColor" : "none"} />
+              </button>
+
+              <button
+                onClick={handleShare}
+                className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
+              >
+                <Share2 className="h-5 w-5" />
+              </button>
             </div>
 
-            <div className="flex gap-3">
-  <button
-    onClick={() => {
-      const query = [
-        venueName,
-        event?.address,
-        event?.suburb,
-        city,
-        state,
-        event?.postcode,
-      ]
-        .filter(Boolean)
-        .join(", ");
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                  Venue
+                </p>
+                <p className="mt-1 text-white font-medium">
+                  {venueName || "Venue TBC"}
+                </p>
+                <p className="mt-1 text-sm text-white/55">
+                  {[event?.address, event?.suburb, city, state, event?.postcode]
+                    .filter(Boolean)
+                    .join(", ") || "Location details coming soon"}
+                </p>
+              </div>
 
-      if (!query) return;
+              <div className="flex gap-3">
+                <button
+                  onClick={() => {
+                    const query = [
+                      venueName,
+                      event?.address,
+                      event?.suburb,
+                      city,
+                      state,
+                      event?.postcode,
+                    ]
+                      .filter(Boolean)
+                      .join(", ");
 
-      window.open(
-        `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
-        "_blank",
-        "noopener,noreferrer"
-      );
-    }}
-    className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
-  >
-    <MapPin className="h-4 w-4" />
-    <span>View Location</span>
-  </button>
-</div>
+                    if (!query) return;
+
+                    window.open(
+                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+                      "_blank",
+                      "noopener,noreferrer"
+                    );
+                  }}
+                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
+                >
+                  <MapPin className="h-4 w-4" />
+                  <span>View Location</span>
+                </button>
+              </div>
+            </div>
           </div>
-        </div>
 
-        {/* ADMIN DELETE */}
-        {isAdmin && (
-          <button
-            onClick={handleDelete}
-            className="mt-2 px-4 py-2 bg-red-600 text-white rounded-xl"
-          >
-            Delete Event
-          </button>
-        )}
-
-        {/* TICKETS */}
-        <div className="pt-1">
-          {ticketUrl ? (
+          {isAdmin && (
             <button
-              onClick={() => window.open(ticketUrl, "_blank", "noopener,noreferrer")}
-              className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+              onClick={handleDelete}
+              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-xl"
             >
-              Get Tickets
-            </button>
-          ) : (
-            <button
-              onClick={() => {
-                const query = [
-                  venueName,
-                  event?.address,
-                  event?.suburb,
-                  city,
-                  state,
-                  event?.postcode,
-                ]
-                  .filter(Boolean)
-                  .join(", ");
-
-                if (!query) return;
-
-                window.open(
-                  `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
-                  "_blank",
-                  "noopener,noreferrer"
-                );
-              }}
-              className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
-            >
-              Contact Venue for Tickets
+              Delete Event
             </button>
           )}
+
+          <div className="pt-1">
+            {ticketUrl ? (
+              <button
+                onClick={() => window.open(ticketUrl, "_blank", "noopener,noreferrer")}
+                className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+              >
+                Get Tickets
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  const query = [
+                    venueName,
+                    event?.address,
+                    event?.suburb,
+                    city,
+                    state,
+                    event?.postcode,
+                  ]
+                    .filter(Boolean)
+                    .join(", ");
+
+                  if (!query) return;
+
+                  window.open(
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+                className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+              >
+                Contact Venue for Tickets
+              </button>
+            )}
+          </div>
         </div>
       </div>
-  </div>
 
-  <LockedFeatureModal
-    open={guestLockOpen}
-    onOpenChange={setGuestLockOpen}
-  />
-</>
+      <LockedFeatureModal
+        open={guestLockOpen}
+        onOpenChange={setGuestLockOpen}
+      />
+    </>
   );
 }
