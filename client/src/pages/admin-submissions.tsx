@@ -171,7 +171,43 @@ const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admi
         lng: venueForm.lng ? Number(venueForm.lng) : undefined,
       }),
     });
+    
+    const deleteVenue = useMutation({
+  mutationFn: async () => {
+    if (!selectedVenueId) return;
 
+    const res = await fetch(`/api/admin/venues/${selectedVenueId}`, {
+      method: "DELETE",
+      credentials: "include",
+      headers: {
+        "x-admin-secret": "admin123",
+      },
+    });
+
+    if (!res.ok) throw new Error("Failed to delete venue");
+  },
+  onSuccess: async () => {
+    setSelectedVenueId("");
+    setVenueForm({
+      name: "",
+      address: "",
+      suburb: "",
+      city: "",
+      state: "",
+      postcode: "",
+      website: "",
+      instagram: "",
+      contactEmail: "",
+      bio: "",
+      lat: "",
+      lng: "",
+    });
+
+    await queryClient.invalidateQueries({ queryKey: ["/api/admin/venues/all"] });
+
+    alert("Venue deleted");
+  },
+});
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
@@ -503,15 +539,6 @@ const createEvent = useMutation({
       
     />
     </div>
-
-  <div className="md:col-span-2 pt-2">
-    <Button
-      onClick={() => saveVenue.mutate()}
-      disabled={saveVenue.isPending || !venueForm.name}
-    >
-      {saveVenue.isPending ? "Saving..." : "Save Venue"}
-    </Button>
-  </div>
 </div>
 
     </div>
