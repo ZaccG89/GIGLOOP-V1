@@ -126,11 +126,30 @@ export default function EventDetail() {
         ? event.ticketUrl
         : `https://${event.ticketUrl}`
       : "";
-
-  const venueName = event?.venueName;
+ const venueName = event?.venueName;
   const city = event?.city;
   const state = event?.state;
   const startTime = event?.startTime;
+
+  const artists = Array.from(
+    new Set(
+      [
+        ...(Array.isArray(event?.artists) ? event.artists : []),
+        ...(Array.isArray(event?.matchedArtists) ? event.matchedArtists : []),
+        ...(Array.isArray(event?.eventArtists)
+          ? event.eventArtists.map((artist: any) =>
+              typeof artist === "string"
+                ? artist
+                : artist?.name || artist?.artistName || ""
+            )
+          : []),
+      ]
+        .map((artist: any) =>
+          typeof artist === "string" ? artist.trim() : ""
+        )
+        .filter(Boolean)
+    )
+  );
 
   const fullLocation = [
     event?.address,
@@ -191,6 +210,27 @@ export default function EventDetail() {
               {fmtDateTime(startTime)}
             </p>
           </div>
+
+                    {artists.length > 0 && (
+            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
+              <div>
+                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                  Lineup
+                </p>
+
+                <div className="mt-2 flex flex-wrap gap-2">
+                  {artists.map((artist) => (
+                    <span
+                      key={artist}
+                      className="rounded-full border border-white/10 px-3 py-1 text-sm text-white/85 bg-white/[0.04]"
+                    >
+                      {artist}
+                    </span>
+                  ))}
+                </div>
+              </div>
+            </div>
+          )}
 
           <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
             <div>
