@@ -3,17 +3,7 @@ import { Link, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
-import { Bookmark, Share2, MapPin } from "lucide-react";
-import { useMutation } from "@tanstack/react-query";
-
-type Counts = {
-  saveCount?: number;
-  shareCount?: number;
-  soundcheckCount?: number;
-  saved?: boolean;
-  shared?: boolean;
-  soundchecked?: boolean;
-};
+import { MapPin } from "lucide-react";
 
 function fmtDateTime(v: any) {
   if (!v) return "";
@@ -30,66 +20,19 @@ export default function EventDetail() {
   const [loading, setLoading] = useState(true);
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
-
   const [event, setEvent] = useState<any>(null);
-  const [counts, setCounts] = useState<Counts>({});
-
-  const [sharePending, setSharePending] = useState(false);
-  const [soundcheckPending, setSoundcheckPending] = useState(false);
 
   const {
     guestLockOpen,
     setGuestLockOpen,
   } = useGuestLock();
 
-  const isGuest = useMemo(() => {
-    return !user || (user as any)?.role === "guest" || !(user as any)?.email;
+  const isAdmin = useMemo(() => {
+    return (
+      typeof user?.email === "string" &&
+      user.email.toLowerCase().includes("admin")
+    );
   }, [user]);
-
-  const isAdmin =
-    typeof user?.email === "string" &&
-    user.email.toLowerCase().includes("admin");
-
-  async function refreshCounts() {
-    try {
-      const res = await fetch(`/api/events/${eventId}/counts`, {
-        credentials: "include",
-      });
-
-      if (!res.ok) return;
-
-      const updated = await res.json();
-      setCounts(updated ?? {});
-    } catch {}
-  }
-
-  const saveMutation = useMutation({
-    mutationFn: async () => {
-      const res = await fetch(`/api/saves/${eventId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!res.ok) throw new Error("Failed to save");
-      return (await res.json()) as { saved: boolean };
-    },
-    onSuccess: async () => {
-      await refreshCounts();
-    },
-  });
-
-  const handleSave = (e: React.MouseEvent) => {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (isGuest) {
-      setGuestLockOpen(true);
-      return;
-    }
-
-    if (saveMutation.isPending) return;
-    saveMutation.mutate();
-  };
 
   const handleDelete = async () => {
     if (!isAdmin || !event?.id) return;
@@ -138,16 +81,6 @@ export default function EventDetail() {
         if (cancelled) return;
 
         setEvent(eventData.event ?? eventData);
-
-        const countsRes = await fetch(`/api/events/${eventId}/counts`, {
-          credentials: "include",
-        });
-
-        if (!cancelled && countsRes.ok) {
-          const countsData = await countsRes.json();
-          setCounts(countsData ?? {});
-        }
-
         setLoading(false);
       } catch (e: any) {
         if (cancelled) return;
@@ -162,70 +95,6 @@ export default function EventDetail() {
       cancelled = true;
     };
   }, [eventId]);
-
-  async function handleSoundcheck(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (isGuest) {
-      setGuestLockOpen(true);
-      return;
-    }
-
-    if (soundcheckPending) return;
-
-    try {
-      setSoundcheckPending(true);
-
-      const res = await fetch(`/api/soundchecks/${eventId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      if (!res.ok) throw new Error("Failed to soundcheck");
-
-      await refreshCounts();
-    } finally {
-      setSoundcheckPending(false);
-    }
-  }
-
-  async function handleShare(e: React.MouseEvent) {
-    e.preventDefault();
-    e.stopPropagation();
-
-    if (isGuest) {
-      setGuestLockOpen(true);
-      return;
-    }
-
-    if (sharePending) return;
-
-    const shareUrl = `${window.location.origin}/events/${eventId}`;
-
-    try {
-      setSharePending(true);
-
-      if (navigator.share) {
-        await navigator.share({
-          title: event?.name,
-          text: `Check out ${event?.name}`,
-          url: shareUrl,
-        });
-      } else {
-        await navigator.clipboard.writeText(shareUrl);
-      }
-
-      await fetch(`/api/shares/${eventId}`, {
-        method: "POST",
-        credentials: "include",
-      });
-
-      await refreshCounts();
-    } finally {
-      setSharePending(false);
-    }
-  }
 
   if (loading) return <div style={{ padding: 40 }}>Loading…</div>;
 
@@ -263,13 +132,26 @@ export default function EventDetail() {
   const state = event?.state;
   const startTime = event?.startTime;
 
-  const saveCount = counts?.saveCount ?? 0;
-  const shareCount = counts?.shareCount ?? 0;
-  const soundcheckCount = counts?.soundcheckCount ?? 0;
+  const fullLocation = [
+    event?.address,
+    event?.suburb,
+    city,
+    state,
+    event?.postcode,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
-  const saved = !!counts?.saved;
-  const shared = !!counts?.shared;
-  const soundchecked = !!counts?.soundchecked;
+  const mapQuery = [
+    venueName,
+    event?.address,
+    event?.suburb,
+    city,
+    state,
+    event?.postcode,
+  ]
+    .filter(Boolean)
+    .join(", ");
 
   return (
     <>
@@ -310,74 +192,50 @@ export default function EventDetail() {
             </p>
           </div>
 
-          <div className="space-y-3">
-            <div className="grid grid-cols-3 gap-3">
-              <button
-                onClick={handleSoundcheck}
-                className="flex items-center justify-center gap-2 rounded-2xl border border-purple-500/70 px-4 py-3 text-white font-semibold shadow-[0_0_20px_rgba(168,85,247,0.18)]"
-              >
-                <span className="text-sm">🎧</span>
-                <span>Soundcheck</span>
-              </button>
-
-              <button
-                onClick={handleSave}
-                className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
-              >
-                <Bookmark className="h-5 w-5" fill={saved ? "currentColor" : "none"} />
-              </button>
-
-              <button
-                onClick={handleShare}
-                className="flex items-center justify-center rounded-2xl border border-purple-500/70 px-4 py-3 text-white"
-              >
-                <Share2 className="h-5 w-5" />
-              </button>
+          <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-4">
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                Date & Time
+              </p>
+              <p className="mt-1 text-white font-medium">
+                {fmtDateTime(startTime) || "Time TBC"}
+              </p>
             </div>
 
-            <div className="rounded-2xl border border-white/10 bg-white/[0.03] p-4 space-y-3">
-              <div>
-                <p className="text-xs uppercase tracking-[0.16em] text-white/45">
-                  Venue
-                </p>
-                <p className="mt-1 text-white font-medium">
-                  {venueName || "Venue TBC"}
-                </p>
-                <p className="mt-1 text-sm text-white/55">
-                  {[event?.address, event?.suburb, city, state, event?.postcode]
-                    .filter(Boolean)
-                    .join(", ") || "Location details coming soon"}
-                </p>
-              </div>
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                Venue
+              </p>
+              <p className="mt-1 text-white font-medium">
+                {venueName || "Venue TBC"}
+              </p>
+            </div>
 
-              <div className="flex gap-3">
-                <button
-                  onClick={() => {
-                    const query = [
-                      venueName,
-                      event?.address,
-                      event?.suburb,
-                      city,
-                      state,
-                      event?.postcode,
-                    ]
-                      .filter(Boolean)
-                      .join(", ");
+            <div>
+              <p className="text-xs uppercase tracking-[0.16em] text-white/45">
+                Location
+              </p>
+              <p className="mt-1 text-sm text-white/55">
+                {fullLocation || "Location details coming soon"}
+              </p>
+            </div>
 
-                    if (!query) return;
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (!mapQuery) return;
 
-                    window.open(
-                      `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
-                      "_blank",
-                      "noopener,noreferrer"
-                    );
-                  }}
-                  className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
-                >
-                  <MapPin className="h-4 w-4" />
-                  <span>View Location</span>
-                </button>
-              </div>
+                  window.open(
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`,
+                    "_blank",
+                    "noopener,noreferrer"
+                  );
+                }}
+                className="flex-1 flex items-center justify-center gap-2 rounded-xl border border-white/10 px-4 py-3 text-white/90"
+              >
+                <MapPin className="h-4 w-4" />
+                <span>View Location</span>
+              </button>
             </div>
           </div>
 
@@ -401,21 +259,10 @@ export default function EventDetail() {
             ) : (
               <button
                 onClick={() => {
-                  const query = [
-                    venueName,
-                    event?.address,
-                    event?.suburb,
-                    city,
-                    state,
-                    event?.postcode,
-                  ]
-                    .filter(Boolean)
-                    .join(", ");
-
-                  if (!query) return;
+                  if (!mapQuery) return;
 
                   window.open(
-                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(query)}`,
+                    `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(mapQuery)}`,
                     "_blank",
                     "noopener,noreferrer"
                   );
