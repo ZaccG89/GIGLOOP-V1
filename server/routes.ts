@@ -18,9 +18,14 @@ import fs from "fs";
 import express from "express";
 import bcrypt from "bcryptjs";
 import { db } from "./db";
-import { eq } from "drizzle-orm";
+import { eq, and } from "drizzle-orm";
 import { spotifyAccounts, eventAttendance } from "@shared/schema";
 import { InsertUserArtist } from "@shared/schema";
+import {
+  userSaves,
+  userShares,
+  userSoundchecks,
+} from "@shared/schema";
 
 const COOKIE_NAME = "gigloop_session";
 
@@ -933,25 +938,42 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
   app.get("/api/events/:id/counts", async (req: any, res) => {
   try {
     const eventId = req.params.id;
+    const userId = req.userId;
 
     const counts = await storage.getEventCounts(eventId);
 
-    const attendees = await db
-      .select()
-      .from(eventAttendance)
-      .where(eq(eventAttendance.eventId, eventId));
+    let saved = false;
+    let shared = false;
+    let soundchecked = false;
 
-    const userId = req.userId ? Number(req.userId) : null;
+    if (userId) {
+      const saves = await db
+        .select()
+        .from(userSaves)
+        .where(and(eq(userSaves.userId, userId), eq(userSaves.eventId, eventId)));
 
-    const isGoing =
-      !!userId && attendees.some((a) => a.userId === userId);
+      const shares = await db
+        .select()
+        .from(userShares)
+        .where(and(eq(userShares.userId, userId), eq(userShares.eventId, eventId)));
+
+      const soundchecks = await db
+        .select()
+        .from(userSoundchecks)
+        .where(and(eq(userSoundchecks.userId, userId), eq(userSoundchecks.eventId, eventId)));
+
+      saved = saves.length > 0;
+      shared = shares.length > 0;
+      soundchecked = soundchecks.length > 0;
+    }
 
     res.json({
-      likes: counts.likes,
-      shares: counts.shares,
-      soundchecks: counts.soundchecks,
-      goingCount: attendees.length,
-      isGoing,
+      saveCount: counts.likes,
+      shareCount: counts.shares,
+      soundcheckCount: counts.soundchecks,
+      saved,
+      shared,
+      soundchecked,
     });
   } catch (error) {
     console.error("Error fetching event counts:", error);

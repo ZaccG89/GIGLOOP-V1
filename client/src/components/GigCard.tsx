@@ -1,8 +1,8 @@
 import { useState, useCallback } from "react";
 import { Bookmark, Share2, Ticket, Music, Users } from "lucide-react";
 import { format } from "date-fns";
-import { useMutation, useQueryClient } from "@tanstack/react-query";import { useToast } from "@/hooks/use-toast";
-import { useAuth } from "@/hooks/use-auth";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import { useToast } from "@/hooks/use-toast";import { useAuth } from "@/hooks/use-auth";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
 import { Card } from "@/components/ui/card";
 import { useGuestLock } from "@/hooks/use-guest-lock";
