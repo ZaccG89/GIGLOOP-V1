@@ -1260,6 +1260,17 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
     return res.json(pending);
   });
 
+  app.get("/api/admin/venues/all", requireAdmin, async (req: Request, res: Response) => {
+  try {
+    const q = String(req.query.q ?? "").trim();
+    const venues = await storage.searchVenues(q);
+    return res.json(venues);
+  } catch (err) {
+    console.error("GET ADMIN VENUES ALL ERROR:", err);
+    return res.status(500).json({ message: "Failed to fetch venues" });
+  }
+});
+
   app.post("/api/admin/venues/:id/approve", requireAdmin, async (req: Request, res: Response) => {
     try {
       const venueId = getParam((req.params as any).id);
