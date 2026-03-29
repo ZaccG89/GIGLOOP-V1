@@ -1,32 +1,24 @@
 import type { Express, Request, Response, NextFunction } from "express";
+import express from "express";
 import { type Server } from "http";
-import { storage } from "./storage";
-import { api } from "@shared/routes";
-import { z } from "zod";
-import { requireAuth, createSession, verifySession } from "./auth";
-import { refreshSpotifyToken } from "./spotify";
-import {
-  generateAppleDeveloperToken,
-  getAppleMusicLibraryArtists,
-} from "./apple";
-import { buildFeedForUser, normalizeName } from "./feedService";
-import { runDemoSeed } from "./demoSeed";
-import cookieParser from "cookie-parser";
-import multer from "multer";
 import path from "path";
 import fs from "fs";
-import express from "express";
+import cookieParser from "cookie-parser";
+import multer from "multer";
 import bcrypt from "bcryptjs";
+import { z } from "zod";
+import { eq, and, or, ilike, like } from "drizzle-orm";
+import { storage } from "./storage";
+import { api } from "@shared/routes";
+import { requireAuth, createSession, verifySession } from "./auth";
+import { refreshSpotifyToken } from "./spotify";
+import { generateAppleDeveloperToken, getAppleMusicLibraryArtists,} from "./apple";
+import { buildFeedForUser, normalizeName } from "./feedService";
+import { runDemoSeed } from "./demoSeed";
 import { db } from "./db";
-import { eq, and } from "drizzle-orm";
-import { spotifyAccounts, eventAttendance } from "@shared/schema";
-import type { InsertUserArtist } from "@shared/schema";
-import {
-  userSaves,
-  userShares,
-  userSoundchecks,
+import { spotifyAccounts, eventAttendance, events, venues, eventArtists, userSaves, userShares, userSoundchecks,
 } from "@shared/schema";
-
+import type { InsertUserArtist } from "@shared/schema";
 
 const COOKIE_NAME = "gigloop_session";
 
@@ -196,6 +188,35 @@ export async function registerRoutes(
       return res.status(500).json({ ok: false, message: e.message });
     }
   });
+
+  app.post("/api/demo/cleanup", async (_req: Request, res: Response) => {
+  try {
+    const deletedDemoArtists = await db
+      .delete(eventArtists)
+      .where(like(eventArtists.providerEventId, "demo-%"))
+      .returning();
+
+    const deletedDemoEvents = await db
+      .delete(events)
+      .where(like(events.providerEventId, "demo-%"))
+      .returning();
+
+    const deletedDemoVenues = await db
+      .delete(venues)
+      .where(eq(venues.source, "demo"))
+      .returning();
+
+    return res.json({
+      ok: true,
+      deletedArtists: deletedDemoArtists.length,
+      deletedEvents: deletedDemoEvents.length,
+      deletedVenues: deletedDemoVenues.length,
+    });
+  } catch (e: any) {
+    console.error("Demo cleanup error:", e);
+    return res.status(500).json({ ok: false, message: e.message });
+  }
+});
 
   app.get("/api/auth/config", (_req: Request, res: Response) => {
     return res.json({
