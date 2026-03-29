@@ -147,12 +147,13 @@ useEffect(() => {
   runAdminVenueSearch();
 }, [adminVenueQuery]);
 
-const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(activeSecret);  const approve = useApproveSubmission(activeSecret);
-  const reject = useRejectSubmission(activeSecret);
+const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions("admin123");
+const approve = useApproveSubmission("admin123");
+const reject = useRejectSubmission("admin123");
 
-const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admin123");  const approveVenue = useApproveVenue(activeSecret);
-  const rejectVenue = useRejectVenue(activeSecret);
-  
+const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admin123");  
+const approveVenue = useApproveVenue("admin123");
+const rejectVenue = useRejectVenue("admin123");
   const queryClient = useQueryClient();
   
   const saveVenue = useMutation({
@@ -171,8 +172,22 @@ const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admi
         lng: venueForm.lng ? Number(venueForm.lng) : undefined,
       }),
     });
-    
-    const deleteVenue = useMutation({
+
+    const data = await res.json().catch(() => ({}));
+
+    if (!res.ok) {
+      throw new Error(data?.message || "Failed to save venue");
+    }
+
+    return data;
+  },
+  onSuccess: async () => {
+    await queryClient.invalidateQueries({ queryKey: ["/api/admin/venues/all"] });
+    alert("Venue saved");
+  },
+});
+
+const deleteVenue = useMutation({
   mutationFn: async () => {
     if (!selectedVenueId) return;
 
@@ -184,10 +199,14 @@ const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admi
       },
     });
 
-    if (!res.ok) throw new Error("Failed to delete venue");
+    if (!res.ok) {
+      throw new Error("Failed to delete venue");
+    }
   },
   onSuccess: async () => {
     setSelectedVenueId("");
+    setAdminVenueQuery("");
+    setAdminVenueResults([]);
     setVenueForm({
       name: "",
       address: "",
@@ -204,23 +223,10 @@ const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admi
     });
 
     await queryClient.invalidateQueries({ queryKey: ["/api/admin/venues/all"] });
-
     alert("Venue deleted");
   },
 });
-    const data = await res.json().catch(() => ({}));
 
-    if (!res.ok) {
-      throw new Error(data?.message || "Failed to save venue");
-    }
-
-    return data;
-  },
-  onSuccess: async () => {
-    await queryClient.invalidateQueries({ queryKey: ["/api/admin/venues/all"] });
-    alert("Venue saved");
-  },
-});
 
 const createEvent = useMutation({
   mutationFn: async () => {
@@ -530,15 +536,35 @@ const createEvent = useMutation({
     />
   </div>
 
-  <div className="md:col-span-2">
+    <div className="md:col-span-2">
     <label className="block text-sm font-bold text-white mb-2">Bio</label>
     <Input
       value={venueForm.bio}
       onChange={(e) => setVenueForm({ ...venueForm, bio: e.target.value })}
       placeholder="Venue bio"
-      
     />
+  </div>
+
+  <div className="md:col-span-2 pt-2">
+    <div className="flex gap-2">
+      <Button
+        onClick={() => saveVenue.mutate()}
+        disabled={saveVenue.isPending || !venueForm.name}
+      >
+        {saveVenue.isPending ? "Saving..." : "Save Venue"}
+      </Button>
+
+      {selectedVenueId && (
+        <Button
+          variant="danger"
+          onClick={() => deleteVenue.mutate()}
+          disabled={deleteVenue.isPending}
+        >
+          {deleteVenue.isPending ? "Deleting..." : "Delete"}
+        </Button>
+      )}
     </div>
+  </div>
 </div>
 
     </div>
