@@ -68,6 +68,21 @@ const [venueResults, setVenueResults] = useState<Venue[]>([]);
 const [venueSearchLoading, setVenueSearchLoading] = useState(false);
 const [adminVenueQuery, setAdminVenueQuery] = useState("");
 const [adminVenueResults, setAdminVenueResults] = useState<Venue[]>([]);
+const [selectedVenueId, setSelectedVenueId] = useState("");
+const [venueForm, setVenueForm] = useState({
+  name: "",
+  address: "",
+  suburb: "",
+  city: "",
+  state: "",
+  postcode: "",
+  website: "",
+  instagram: "",
+  contactEmail: "",
+  bio: "",
+  lat: "",
+  lng: "",
+});
 
 useEffect(() => {
   const runVenueSearch = async () => {
@@ -270,12 +285,39 @@ const createEvent = useMutation({
         <>
         <Card className="p-6 mb-6 border-primary/20">
   <div className="space-y-4">
-    <div>
-      <h2 className="text-xl font-bold text-white">Manage Venues</h2>
-      <p className="text-sm text-muted-foreground">
-        Search and edit existing venues or create new ones.
-      </p>
-    </div>
+    <div className="flex items-start justify-between gap-4">
+  <div>
+    <h2 className="text-xl font-bold text-white">Manage Venues</h2>
+    <p className="text-sm text-muted-foreground">
+      Search and edit existing venues or create new ones.
+    </p>
+  </div>
+
+  <Button
+    type="button"
+    onClick={() => {
+      setSelectedVenueId("");
+      setAdminVenueQuery("");
+      setAdminVenueResults([]);
+      setVenueForm({
+        name: "",
+        address: "",
+        suburb: "",
+        city: "",
+        state: "",
+        postcode: "",
+        website: "",
+        instagram: "",
+        contactEmail: "",
+        bio: "",
+        lat: "",
+        lng: "",
+      });
+    }}
+  >
+    New Venue
+  </Button>
+</div>
 
     <Input
       value={adminVenueQuery}
@@ -284,113 +326,156 @@ const createEvent = useMutation({
     />
 
     {adminVenueQuery.trim().length >= 2 && (
-      <div className="rounded-xl border border-white/10 bg-[#0b1020] overflow-hidden">
-        {adminVenueResults.length === 0 ? (
-          <div className="px-4 py-3 text-sm text-white/70">
-            No venues found
-          </div>
-        ) : (
-          adminVenueResults.map((venue) => (
-            <div
-              key={venue.id}
-              className="px-4 py-3 border-b border-white/5 last:border-b-0"
-            >
-              <div className="font-medium text-white">{venue.name}</div>
-              <div className="text-xs text-white/60">
-                {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
-              </div>
-            </div>
-          ))
-        )}
+  <div className="rounded-xl border border-white/10 bg-[#0b1020] overflow-hidden">
+    {adminVenueResults.length === 0 ? (
+      <div className="px-4 py-3 text-sm text-white/70">
+        No venues found
       </div>
+    ) : (
+      adminVenueResults.map((venue) => (
+        <button
+          key={venue.id}
+          type="button"
+          className="block w-full px-4 py-3 text-left border-b border-white/5 last:border-b-0 hover:bg-white/5"
+          onClick={() => {
+            setSelectedVenueId(venue.id);
+            setVenueForm({
+              name: venue.name || "",
+              address: venue.address || "",
+              suburb: venue.suburb || "",
+              city: venue.city || "",
+              state: venue.state || "",
+              postcode: venue.postcode || "",
+              website: venue.website || "",
+              instagram: venue.instagram || "",
+              contactEmail: venue.contactEmail || "",
+              bio: venue.bio || "",
+              lat: venue.lat != null ? String(venue.lat) : "",
+              lng: venue.lng != null ? String(venue.lng) : "",
+            });
+          }}
+        >
+          <div className="font-medium text-white">{venue.name}</div>
+          <div className="text-xs text-white/60">
+            {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
+          </div>
+        </button>
+      ))
     )}
   </div>
-</Card>
-          {/* Tabs */}
-          <Card className="p-6 mb-6 border-primary/20">
-  <div className="space-y-4">
-    <div>
-      <h2 className="text-xl font-bold text-white">Create Event</h2>
-      <p className="text-sm text-muted-foreground">
-        Add gigs directly into GigLoop for manual seeding.
-      </p>
-    </div>
+)}
 
-    <div className="grid gap-4 md:grid-cols-2">
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Event Name</label>
-        <Input
-          value={form.name}
-          onChange={(e) => setForm({ ...form, name: e.target.value })}
-          placeholder="Band / Event name"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Start Time</label>
-        <Input
-          type="datetime-local"
-          value={form.startTime}
-          onChange={(e) => setForm({ ...form, startTime: e.target.value })}
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
-        <Input
-          value={form.venueName}
-          onChange={(e) => setForm({ ...form, venueName: e.target.value })}
-          placeholder="Venue name"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Ticket URL</label>
-        <Input
-          value={form.ticketUrl}
-          onChange={(e) => setForm({ ...form, ticketUrl: e.target.value })}
-          placeholder="https://..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Image URL</label>
-        <Input
-          value={form.imageUrl}
-          onChange={(e) => setForm({ ...form, imageUrl: e.target.value })}
-          placeholder="https://..."
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">City</label>
-        <Input
-          value={form.city}
-          onChange={(e) => setForm({ ...form, city: e.target.value })}
-          placeholder="Brisbane"
-        />
-      </div>
-
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">State</label>
-        <Input
-          value={form.state}
-          onChange={(e) => setForm({ ...form, state: e.target.value })}
-          placeholder="QLD"
-        />
-      </div>
-    </div>
-
-    <div className="pt-2">
-      <Button
-        onClick={() => createEvent.mutate()}
-        disabled={createEvent.isPending || !form.name || !form.startTime || !form.venueName}
-        className="w-full md:w-auto"
-      >
-        {createEvent.isPending ? "Creating..." : "Create Event"}
-      </Button>
-    </div>
+<div className="grid gap-4 md:grid-cols-2 pt-2">
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
+    <Input
+      value={venueForm.name}
+      onChange={(e) => setVenueForm({ ...venueForm, name: e.target.value })}
+      placeholder="Venue name"
+    />
   </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Address</label>
+    <Input
+      value={venueForm.address}
+      onChange={(e) => setVenueForm({ ...venueForm, address: e.target.value })}
+      placeholder="Street address"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Suburb</label>
+    <Input
+      value={venueForm.suburb}
+      onChange={(e) => setVenueForm({ ...venueForm, suburb: e.target.value })}
+      placeholder="Suburb"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">City</label>
+    <Input
+      value={venueForm.city}
+      onChange={(e) => setVenueForm({ ...venueForm, city: e.target.value })}
+      placeholder="City"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">State</label>
+    <Input
+      value={venueForm.state}
+      onChange={(e) => setVenueForm({ ...venueForm, state: e.target.value })}
+      placeholder="State"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Postcode</label>
+    <Input
+      value={venueForm.postcode}
+      onChange={(e) => setVenueForm({ ...venueForm, postcode: e.target.value })}
+      placeholder="Postcode"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Website</label>
+    <Input
+      value={venueForm.website}
+      onChange={(e) => setVenueForm({ ...venueForm, website: e.target.value })}
+      placeholder="https://..."
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Instagram</label>
+    <Input
+      value={venueForm.instagram}
+      onChange={(e) => setVenueForm({ ...venueForm, instagram: e.target.value })}
+      placeholder="@venue"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Contact Email</label>
+    <Input
+      value={venueForm.contactEmail}
+      onChange={(e) => setVenueForm({ ...venueForm, contactEmail: e.target.value })}
+      placeholder="email@example.com"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Latitude</label>
+    <Input
+      value={venueForm.lat}
+      onChange={(e) => setVenueForm({ ...venueForm, lat: e.target.value })}
+      placeholder="-26.798"
+    />
+  </div>
+
+  <div>
+    <label className="block text-sm font-bold text-white mb-2">Longitude</label>
+    <Input
+      value={venueForm.lng}
+      onChange={(e) => setVenueForm({ ...venueForm, lng: e.target.value })}
+      placeholder="153.1364"
+    />
+  </div>
+
+  <div className="md:col-span-2">
+    <label className="block text-sm font-bold text-white mb-2">Bio</label>
+    <Input
+      value={venueForm.bio}
+      onChange={(e) => setVenueForm({ ...venueForm, bio: e.target.value })}
+      placeholder="Venue bio"
+    />
+  </div>
+</div>
+
+    </div>
 </Card>
           <div className="flex gap-2 mb-6">
             <button
