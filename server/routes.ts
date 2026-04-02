@@ -1167,31 +1167,40 @@ const sessionToken = await createSession(userId);
       return res.status(403).json({ message: "Admin only" });
     }
 
-    const {
-      name,
-      startTime,
-      venueName,
-      ticketUrl,
-      imageUrl,
-      city,
-      state,
-    } = req.body;
+  const {
+  name,
+  startTime,
+  venueId,
+  venueName,
+  venueLat,
+  venueLng,
+  ticketUrl,
+  imageUrl,
+  city,
+  state,
+} = req.body;
 
     if (!name || !startTime || !venueName) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
     const event = await storage.createEvent({
-      provider: "manual",
-      providerEventId: `manual-${Date.now()}`,
-      name,
-      startTime: new Date(startTime),
-      venueName,
-      ticketUrl,
-      imageUrl,
-      city,
-      state,
-    });
+  provider: "manual",
+  providerEventId: `manual-${Date.now()}`,
+  name,
+  startTime: new Date(startTime),
+  venueName,
+  venueLat: venueLat ? Number(venueLat) : undefined,
+  venueLng: venueLng ? Number(venueLng) : undefined,
+  ticketUrl,
+  imageUrl,
+  city,
+  state,
+  rawJson: {
+    source: "admin_manual_create",
+    venueId: venueId || null,
+  },
+});
 
     return res.status(201).json(event);
   } catch (err) {
