@@ -56,7 +56,10 @@ export default function AdminSubmissions() {
   const [form, setForm] = useState({
   name: "",
   startTime: "",
+  venueId: "",
   venueName: "",
+  venueLat: "",
+  venueLng: "",
   ticketUrl: "",
   imageUrl: "",
   city: "",
@@ -115,6 +118,12 @@ useEffect(() => {
 
   runVenueSearch();
 }, [venueQuery]);
+
+useEffect(() => {
+  if (form.venueName && !venueQuery) {
+    setVenueQuery(form.venueName);
+  }
+}, [form.venueName, venueQuery]);
 
 useEffect(() => {
   const runAdminVenueSearch = async () => {
@@ -249,14 +258,19 @@ const createEvent = useMutation({
   },
   onSuccess: async () => {
     setForm({
-      name: "",
-      startTime: "",
-      venueName: "",
-      ticketUrl: "",
-      imageUrl: "",
-      city: "",
-      state: "",
-    });
+  name: "",
+  startTime: "",
+  venueId: "",
+  venueName: "",
+  venueLat: "",
+  venueLng: "",
+  ticketUrl: "",
+  imageUrl: "",
+  city: "",
+  state: "",
+});
+setVenueQuery("");
+setVenueResults([]);
 
     // 🔥 THIS IS THE FIX
     await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
@@ -436,15 +450,77 @@ const createEvent = useMutation({
   </div>
 )}
 
-<div className="grid gap-4 md:grid-cols-2 pt-2">
-  <div>
-    <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
-    <Input
-      value={venueForm.name}
-      onChange={(e) => setVenueForm({ ...venueForm, name: e.target.value })}
-      placeholder="Venue name"
-    />
-  </div>
+<div className="relative">
+  <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
+  <Input
+    value={venueQuery}
+    onChange={(e) => {
+      const value = e.target.value;
+      setVenueQuery(value);
+      setForm({
+        ...form,
+        venueId: "",
+        venueName: value,
+        venueLat: "",
+        venueLng: "",
+        city: "",
+        state: "",
+      });
+    }}
+    placeholder="Search venue name"
+  />
+
+  {venueQuery.trim().length >= 2 && (
+    <div className="mt-2 rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
+      {venueSearchLoading ? (
+        <div className="px-4 py-3 text-sm text-white/70">Searching venues...</div>
+      ) : venueResults.length === 0 ? (
+        <button
+          type="button"
+          className="w-full px-4 py-3 text-left hover:bg-white/5"
+          onClick={() => {
+            setForm({
+              ...form,
+              venueId: "",
+              venueName: venueQuery.trim(),
+              venueLat: "",
+              venueLng: "",
+            });
+          }}
+        >
+          <div className="text-white font-medium">Use "{venueQuery}"</div>
+          <div className="text-xs text-white/60">No linked venue selected</div>
+        </button>
+      ) : (
+        venueResults.slice(0, 8).map((venue) => (
+          <button
+            key={venue.id}
+            type="button"
+            className="block w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
+            onClick={() => {
+              setVenueQuery(venue.name || "");
+              setVenueResults([]);
+              setForm({
+                ...form,
+                venueId: venue.id,
+                venueName: venue.name || "",
+                venueLat: venue.lat != null ? String(venue.lat) : "",
+                venueLng: venue.lng != null ? String(venue.lng) : "",
+                city: venue.city || "",
+                state: venue.state || "",
+              });
+            }}
+          >
+            <div className="font-medium text-white">{venue.name}</div>
+            <div className="text-xs text-white/60">
+              {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+  )}
+</div>
 
   <div>
     <label className="block text-sm font-bold text-white mb-2">Address</label>
@@ -568,7 +644,7 @@ const createEvent = useMutation({
   </div>
 </div>
 
-    </div>
+  
 </Card>
 
 <Card className="p-6 mb-6 border-primary/20">
@@ -599,14 +675,77 @@ const createEvent = useMutation({
         />
       </div>
 
-      <div>
-        <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
-        <Input
-          value={form.venueName}
-          onChange={(e) => setForm({ ...form, venueName: e.target.value })}
-          placeholder="Venue name"
-        />
-      </div>
+    <div className="relative">
+  <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
+  <Input
+    value={venueQuery}
+    onChange={(e) => {
+      const value = e.target.value;
+      setVenueQuery(value);
+      setForm({
+        ...form,
+        venueId: "",
+        venueName: value,
+        venueLat: "",
+        venueLng: "",
+        city: "",
+        state: "",
+      });
+    }}
+    placeholder="Search venue name"
+  />
+
+  {venueQuery.trim().length >= 2 && (
+    <div className="mt-2 rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
+      {venueSearchLoading ? (
+        <div className="px-4 py-3 text-sm text-white/70">Searching venues...</div>
+      ) : venueResults.length === 0 ? (
+        <button
+          type="button"
+          className="w-full px-4 py-3 text-left hover:bg-white/5"
+          onClick={() => {
+            setForm({
+              ...form,
+              venueId: "",
+              venueName: venueQuery.trim(),
+              venueLat: "",
+              venueLng: "",
+            });
+          }}
+        >
+          <div className="text-white font-medium">Use "{venueQuery}"</div>
+          <div className="text-xs text-white/60">No linked venue selected</div>
+        </button>
+      ) : (
+        venueResults.slice(0, 8).map((venue) => (
+          <button
+            key={venue.id}
+            type="button"
+            className="block w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
+            onClick={() => {
+              setVenueQuery(venue.name || "");
+              setVenueResults([]);
+              setForm({
+                ...form,
+                venueId: venue.id,
+                venueName: venue.name || "",
+                venueLat: venue.lat != null ? String(venue.lat) : "",
+                venueLng: venue.lng != null ? String(venue.lng) : "",
+                city: venue.city || "",
+                state: venue.state || "",
+              });
+            }}
+          >
+            <div className="font-medium text-white">{venue.name}</div>
+            <div className="text-xs text-white/60">
+              {[venue.suburb, venue.city, venue.state].filter(Boolean).join(", ")}
+            </div>
+          </button>
+        ))
+      )}
+    </div>
+  )}
+</div>
 
       <div>
         <label className="block text-sm font-bold text-white mb-2">Ticket URL</label>
