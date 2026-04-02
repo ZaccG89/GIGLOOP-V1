@@ -978,6 +978,17 @@ const sessionToken = await createSession(userId);
       const id = getParam((req.params as any).id);
       const event = await storage.getEventById(id);
 
+      console.log("EVENT DEBUG", {
+  id: event?.id,
+  name: event?.name,
+  provider: event?.provider,
+  providerEventId: event?.providerEventId,
+  venueName: event?.venueName,
+  city: event?.city,
+  state: event?.state,
+  rawJson: event?.rawJson,
+});
+
       if (!event) {
         return res.status(404).json({ message: "Event not found" });
       }
