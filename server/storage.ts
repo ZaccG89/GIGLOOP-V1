@@ -459,25 +459,27 @@ export class DatabaseStorage implements IStorage {
 }
 
   async getEventsByVenueName(
-    venueName: string,
-    days = 42
-  ): Promise<Event[]> {
-    const futureDate = new Date();
-    futureDate.setDate(futureDate.getDate() + days);
+  venueName: string,
+  days = 42
+): Promise<Event[]> {
+  const futureDate = new Date();
+  futureDate.setDate(futureDate.getDate() + days);
 
-    return await db
-      .select()
-      .from(events)
-      .where(
-        and(
-          ilike(events.venueName, venueName),
-          gte(events.startTime, new Date()),
-          lte(events.startTime, futureDate)
-        )
+  const cleanName = venueName.trim();
+
+  return await db
+    .select()
+    .from(events)
+    .where(
+      and(
+        ilike(events.venueName, `%${cleanName}%`),
+        gte(events.startTime, new Date()),
+        lte(events.startTime, futureDate)
       )
-      .orderBy(events.startTime)
-      .limit(50);
-  }
+    )
+    .orderBy(events.startTime)
+    .limit(50);
+}
 
   async getEventById(eventId: string): Promise<Event | undefined> {
     const result = await db
