@@ -218,31 +218,28 @@ export async function registerRoutes(
     let deletedVenues: { length: number } = { length: 0 };
 
     if (demoEventIds.length > 0) {
-      deletedLikes = await db
-        .delete(userLikes)
-        .where(inArray(userLikes.eventId, demoEventIds))
-        .returning();
+  deletedLikes = await db
+    .delete(userLikes)
+    .where(inArray(userLikes.eventId, demoEventIds))
+    .returning();
 
-      deletedSaves = await db
-        .delete(userSaves)
-        .where(inArray(userSaves.eventId, demoEventIds))
-        .returning();
+  deletedSaves = await db
+    .delete(userSaves)
+    .where(inArray(userSaves.eventId, demoEventIds))
+    .returning();
 
-      deletedShares = await db
-        .delete(userShares)
-        .where(inArray(userShares.eventId, demoEventIds))
-        .returning();
+  deletedShares = await db
+    .delete(userShares)
+    .where(inArray(userShares.eventId, demoEventIds))
+    .returning();
 
-      deletedSoundchecks = await db
-        .delete(userSoundchecks)
-        .where(inArray(userSoundchecks.eventId, demoEventIds))
-        .returning();
+  deletedSoundchecks = await db
+    .delete(userSoundchecks)
+    .where(inArray(userSoundchecks.eventId, demoEventIds))
+    .returning();
 
-      deletedAttendance = await db
-        .delete(eventAttendance)
-        .where(inArray(eventAttendance.eventId, demoEventIds))
-        .returning();
-    }
+  deletedAttendance = [];
+}
 
     if (demoProviderEventIds.length > 0) {
       deletedArtists = await db
