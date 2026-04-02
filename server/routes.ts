@@ -1185,7 +1185,7 @@ const sessionToken = await createSession(userId);
   provider: "manual",
   providerEventId: `manual-${Date.now()}`,
   name,
-  startTime: new Date(startTime.replace("T", " ") + ":00"),
+  startTime: new Date(startTime),
   venueName,
   venueLat: venueLat ? Number(venueLat) : undefined,
   venueLng: venueLng ? Number(venueLng) : undefined,

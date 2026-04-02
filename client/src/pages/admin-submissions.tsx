@@ -245,7 +245,10 @@ const createEvent = useMutation({
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(form),
+      body: JSON.stringify({
+  ...form,
+  startTime: new Date(form.startTime).toISOString(),
+}),
     });
 
     const data = await res.json().catch(() => ({}));
