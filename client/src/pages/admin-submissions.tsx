@@ -545,27 +545,7 @@ const createEvent = useMutation({
     />
   </div>
 
-  <div className="md:col-span-2 pt-2">
-    <div className="flex gap-2">
-      <Button
-        onClick={() => saveVenue.mutate()}
-        disabled={saveVenue.isPending || !venueForm.name}
-      >
-        {saveVenue.isPending ? "Saving..." : "Save Venue"}
-      </Button>
-
-      {selectedVenueId && (
-        <Button
-          variant="danger"
-          onClick={() => deleteVenue.mutate()}
-          disabled={deleteVenue.isPending}
-        >
-          {deleteVenue.isPending ? "Deleting..." : "Delete"}
-        </Button>
-      )}
-    </div>
-  </div>
-
+ 
   <div className="md:col-span-2 pt-2">
     <div className="flex gap-2">
       <Button

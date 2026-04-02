@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { eq, and, or, ilike, like } from "drizzle-orm";
+import { eq, and, or, ilike, like, inArray } from "drizzle-orm";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { requireAuth, createSession, verifySession } from "./auth";
@@ -16,7 +16,16 @@ import { generateAppleDeveloperToken, getAppleMusicLibraryArtists,} from "./appl
 import { buildFeedForUser, normalizeName } from "./feedService";
 import { runDemoSeed } from "./demoSeed";
 import { db } from "./db";
-import { spotifyAccounts, eventAttendance, events, venues, eventArtists, userSaves, userShares, userSoundchecks,
+import {
+  spotifyAccounts,
+  eventAttendance,
+  events,
+  venues,
+  eventArtists,
+  userLikes,
+  userSaves,
+  userShares,
+  userSoundchecks,
 } from "@shared/schema";
 import type { InsertUserArtist } from "@shared/schema";
 
@@ -191,26 +200,77 @@ export async function registerRoutes(
 
   app.post("/api/demo/cleanup", async (_req: Request, res: Response) => {
   try {
-    const deletedDemoArtists = await db
-      .delete(eventArtists)
-      .where(like(eventArtists.providerEventId, "demo-%"))
-      .returning();
+    const demoEvents = await db
+      .select({ id: events.id, providerEventId: events.providerEventId })
+      .from(events)
+      .where(like(events.providerEventId, "demo-%"));
 
-    const deletedDemoEvents = await db
+    const demoEventIds = demoEvents.map((e) => e.id);
+    const demoProviderEventIds = demoEvents.map((e) => e.providerEventId);
+
+    let deletedLikes: { length: number } = { length: 0 };
+    let deletedSaves: { length: number } = { length: 0 };
+    let deletedShares: { length: number } = { length: 0 };
+    let deletedSoundchecks: { length: number } = { length: 0 };
+    let deletedAttendance: { length: number } = { length: 0 };
+    let deletedArtists: { length: number } = { length: 0 };
+    let deletedEvents: { length: number } = { length: 0 };
+    let deletedVenues: { length: number } = { length: 0 };
+
+    if (demoEventIds.length > 0) {
+      deletedLikes = await db
+        .delete(userLikes)
+        .where(inArray(userLikes.eventId, demoEventIds))
+        .returning();
+
+      deletedSaves = await db
+        .delete(userSaves)
+        .where(inArray(userSaves.eventId, demoEventIds))
+        .returning();
+
+      deletedShares = await db
+        .delete(userShares)
+        .where(inArray(userShares.eventId, demoEventIds))
+        .returning();
+
+      deletedSoundchecks = await db
+        .delete(userSoundchecks)
+        .where(inArray(userSoundchecks.eventId, demoEventIds))
+        .returning();
+
+      deletedAttendance = await db
+        .delete(eventAttendance)
+        .where(inArray(eventAttendance.eventId, demoEventIds))
+        .returning();
+    }
+
+    if (demoProviderEventIds.length > 0) {
+      deletedArtists = await db
+        .delete(eventArtists)
+        .where(inArray(eventArtists.providerEventId, demoProviderEventIds))
+        .returning();
+    }
+
+    deletedEvents = await db
       .delete(events)
       .where(like(events.providerEventId, "demo-%"))
       .returning();
 
-    const deletedDemoVenues = await db
+    deletedVenues = await db
       .delete(venues)
       .where(eq(venues.source, "demo"))
       .returning();
 
     return res.json({
       ok: true,
-      deletedArtists: deletedDemoArtists.length,
-      deletedEvents: deletedDemoEvents.length,
-      deletedVenues: deletedDemoVenues.length,
+      deletedLikes: deletedLikes.length,
+      deletedSaves: deletedSaves.length,
+      deletedShares: deletedShares.length,
+      deletedSoundchecks: deletedSoundchecks.length,
+      deletedAttendance: deletedAttendance.length,
+      deletedArtists: deletedArtists.length,
+      deletedEvents: deletedEvents.length,
+      deletedVenues: deletedVenues.length,
     });
   } catch (e: any) {
     console.error("Demo cleanup error:", e);
