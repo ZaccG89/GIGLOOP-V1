@@ -37,25 +37,26 @@ export async function buildFeedForUser(userId?: string | null) {
   const radius = user?.radiusKm ?? 500;
 
   const cards = allEvents
-    .filter((event) => {
-      if (
-        locationLat == null ||
-        locationLng == null ||
-        event.venueLat == null ||
-        event.venueLng == null
-      ) {
-        return true;
-      }
+  .filter((event) => {
+    const hasCoords = event.venueLat != null && event.venueLng != null;
 
-      const distanceKm = haversineKm(
-        locationLat,
-        locationLng,
-        event.venueLat,
-        event.venueLng
-      );
+    if (locationLat == null || locationLng == null) {
+      return hasCoords;
+    }
 
-      return distanceKm <= radius;
-    })
+    if (!hasCoords) {
+      return false;
+    }
+
+    const distanceKm = haversineKm(
+  locationLat,
+  locationLng,
+  event.venueLat!,
+  event.venueLng!
+);
+
+    return distanceKm <= radius;
+  })
     .slice(0, 300)
     .map((event) => ({
       ...event,
