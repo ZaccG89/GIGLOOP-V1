@@ -1219,8 +1219,6 @@ const sessionToken = await createSession(userId);
 
 app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Response) => {
   try {
-    
-
     const {
       id,
       name,
@@ -1241,8 +1239,25 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
       return res.status(400).json({ message: "Venue name is required" });
     }
 
+    const parsedLat =
+      lat === "" || lat == null ? null : Number(lat);
+
+    const parsedLng =
+      lng === "" || lng == null ? null : Number(lng);
+
+    if (
+      parsedLat == null ||
+      parsedLng == null ||
+      Number.isNaN(parsedLat) ||
+      Number.isNaN(parsedLng)
+    ) {
+      return res.status(400).json({
+        message: "Venue latitude and longitude are required",
+      });
+    }
+
     const venue = await storage.upsertVenue({
-      id: id || undefined, // ← important (new vs update)
+      id: id || undefined,
       name: name.trim(),
       address,
       suburb,
@@ -1253,8 +1268,8 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
       instagram,
       contactEmail,
       bio,
-      lat,
-      lng,
+      lat: parsedLat,
+      lng: parsedLng,
     });
 
     return res.json(venue);
