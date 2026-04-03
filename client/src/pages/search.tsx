@@ -28,7 +28,20 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const { data: feed = [], isLoading: feedLoading } = useFeed();
-  
+  const { data: venuesFromApi = [], isLoading: venuesLoading } = useQuery<any[]>({  queryKey: ["/api/venues/search", trimmedQuery],
+  queryFn: async () => {
+    if (!trimmedQuery) return [];
+
+    const res = await fetch(
+      `/api/venues?q=${encodeURIComponent(trimmedQuery)}`
+    );
+
+    if (!res.ok) return [];
+    return res.json();
+  },
+  enabled: !!trimmedQuery,
+  retry: false,
+});
 
   const { data: users = [], isLoading: usersLoading } = useQuery<UserResult[]>({
     queryKey: ["/api/users/search", trimmedQuery],
@@ -81,40 +94,19 @@ export default function SearchPage() {
 const venueResults = useMemo<VenueResult[]>(() => {
   if (!trimmedQuery) return [];
 
-  const venueMap = new Map<string, VenueResult>();
-
-  for (const rawItem of Array.isArray(feed) ? feed : []) {
-    const item = rawItem as any;
-
-    const venueName =
-      typeof item?.venueName === "string" ? item.venueName.trim() : "";
-
-    if (!venueName) continue;
-
-    const venueId =
-      item?.venueId != null ? String(item.venueId) : venueName;
-
-    const key = venueName.toLowerCase();
-    const existing = venueMap.get(key);
-
-    if (existing) {
-      existing.count += 1;
-    } else {
-      venueMap.set(key, {
-        id: venueId,
-        name: venueName,
-        count: 1,
-      });
-    }
-  }
-
-  return Array.from(venueMap.values())
-    .filter((venue) =>
-      venue.name.toLowerCase().includes(trimmedQuery.toLowerCase())
-    )
-    .sort((a, b) => b.count - a.count || a.name.localeCompare(b.name))
+  return venuesFromApi
+    .filter((venue: any) => {
+      const name =
+        typeof venue?.name === "string" ? venue.name.toLowerCase() : "";
+      return name.includes(trimmedQuery.toLowerCase());
+    })
+    .map((venue: any) => ({
+      id: String(venue.id),
+      name: String(venue.name),
+      count: 0,
+    }))
     .slice(0, 8);
-}, [feed, trimmedQuery]);
+}, [venuesFromApi, trimmedQuery]);
 
   const userResults = useMemo<UserResult[]>(() => {
     if (!trimmedQuery) return [];
@@ -128,7 +120,7 @@ const venueResults = useMemo<VenueResult[]>(() => {
       .slice(0, 8);
   }, [users, trimmedQuery]);
 
-  const isLoading = feedLoading || usersLoading;
+  const isLoading = feedLoading || usersLoading || venuesLoading;
 
   return (
     <Layout>
