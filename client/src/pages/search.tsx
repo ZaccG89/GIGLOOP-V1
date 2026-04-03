@@ -28,16 +28,23 @@ export default function SearchPage() {
   const [query, setQuery] = useState("");
   const trimmedQuery = query.trim();
   const { data: feed = [], isLoading: feedLoading } = useFeed();
-  const { data: venuesFromApi = [], isLoading: venuesLoading } = useQuery<any[]>({  queryKey: ["/api/venues/search", trimmedQuery],
+  const { data: venuesFromApi = [], isLoading: venuesLoading } = useQuery<any[]>({
+  queryKey: ["/api/venues/search", trimmedQuery],
   queryFn: async () => {
     if (!trimmedQuery) return [];
 
-    const res = await fetch(
-      `/api/venues?q=${encodeURIComponent(trimmedQuery)}`
-    );
+    const url = `/api/venues?q=${encodeURIComponent(trimmedQuery)}`;
+    console.log("VENUE SEARCH URL", url);
+
+    const res = await fetch(url, { credentials: "include" });
+    console.log("VENUE SEARCH STATUS", res.status);
 
     if (!res.ok) return [];
-    return res.json();
+
+    const data = (await res.json()) as any[];
+    console.log("VENUE SEARCH DATA", data);
+
+    return data;
   },
   enabled: !!trimmedQuery,
   retry: false,
@@ -107,6 +114,8 @@ const venueResults = useMemo<VenueResult[]>(() => {
     }))
     .slice(0, 8);
 }, [venuesFromApi, trimmedQuery]);
+ 
+console.log("VENUE RESULTS", venueResults);
 
   const userResults = useMemo<UserResult[]>(() => {
     if (!trimmedQuery) return [];
