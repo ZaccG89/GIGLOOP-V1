@@ -186,19 +186,30 @@ console.log("VENUE RESULTS", venueResults);
                 Artists
               </h2>
 
-              {artistResults.length === 0 ? (
-                <p className="text-sm" style={{ color: "var(--muted-color)" }}>
-                  No artists found
-                </p>
-              ) : (
-                artistResults.map((artist) => (
+              {venueResults.length === 0 ? (
+  <div className="space-y-2">
+    <p className="text-sm" style={{ color: "var(--muted-color)" }}>
+      No venues found
+    </p>
+
+    <pre
+      className="text-xs rounded-xl p-3 overflow-x-auto"
+      style={{
+        background: "rgba(255,255,255,0.04)",
+        border: "1px solid rgba(255,255,255,0.08)",
+        color: "var(--silver)",
+      }}
+    >
+      {JSON.stringify(venuesFromApi, null, 2)}
+    </pre>
+  </div>
+) : (
+  venueResults.map((venue) => (
                   <button
-                    key={artist.name}
+                    key={venue.name}
                     type="button"
                     onClick={() =>
-                      setLocation(
-                        `/artists/${encodeURIComponent(artist.name)}?name=${encodeURIComponent(artist.name)}`
-                      )
+                      setLocation(`/venues/${venue.id}`)
                     }
                     className="w-full flex items-center gap-3 px-4 py-3 rounded-2xl text-left"
                     style={{
@@ -218,10 +229,10 @@ console.log("VENUE RESULTS", venueResults);
 
                     <div className="min-w-0">
                       <p className="font-semibold truncate" style={{ color: "var(--silver)" }}>
-                        {artist.name}
+                        {venue.name}
                       </p>
                       <p className="text-xs" style={{ color: "var(--muted-color)" }}>
-                        {artist.count} matching gig{artist.count === 1 ? "" : "s"}
+                        {venue.count} matching gig{venue.count === 1 ? "" : "s"}
                       </p>
                     </div>
                   </button>
