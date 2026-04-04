@@ -1175,40 +1175,71 @@ const sessionToken = await createSession(userId);
       return res.status(403).json({ message: "Admin only" });
     }
 
-  const {
-  name,
-  startTime,
-  venueId,
-  venueName,
-  venueLat,
-  venueLng,
-  ticketUrl,
-  imageUrl,
-  city,
-  state,
-} = req.body;
+    const {
+      name,
+      startTime,
+      venueId,
+      venueName,
+      venueLat,
+      venueLng,
+      ticketUrl,
+      imageUrl,
+      city,
+      state,
+    } = req.body;
 
     if (!name || !startTime || !venueName) {
       return res.status(400).json({ message: "Missing required fields" });
     }
 
+    let resolvedVenueName = venueName;
+    let resolvedVenueLat =
+      venueLat === "" || venueLat == null ? undefined : Number(venueLat);
+    let resolvedVenueLng =
+      venueLng === "" || venueLng == null ? undefined : Number(venueLng);
+    let resolvedCity = city;
+    let resolvedState = state;
+
+    if (venueId) {
+      const venue = await storage.getVenue(String(venueId));
+
+      if (venue) {
+        resolvedVenueName = venue.name || venueName;
+        resolvedVenueLat = venue.lat ?? resolvedVenueLat;
+        resolvedVenueLng = venue.lng ?? resolvedVenueLng;
+        resolvedCity = venue.city || resolvedCity;
+        resolvedState = venue.state || resolvedState;
+      }
+    }
+
+    if (
+      resolvedVenueLat == null ||
+      resolvedVenueLng == null ||
+      Number.isNaN(resolvedVenueLat) ||
+      Number.isNaN(resolvedVenueLng)
+    ) {
+      return res.status(400).json({
+        message: "Please select a saved venue with valid coordinates",
+      });
+    }
+
     const event = await storage.createEvent({
-  provider: "manual",
-  providerEventId: `manual-${Date.now()}`,
-  name,
-  startTime: new Date(startTime),
-  venueName,
-  venueLat: venueLat ? Number(venueLat) : undefined,
-  venueLng: venueLng ? Number(venueLng) : undefined,
-  ticketUrl,
-  imageUrl,
-  city,
-  state,
-  rawJson: {
-    source: "admin_manual_create",
-    venueId: venueId || null,
-  },
-});
+      provider: "manual",
+      providerEventId: `manual-${Date.now()}`,
+      name,
+      startTime: new Date(startTime),
+      venueName: resolvedVenueName,
+      venueLat: resolvedVenueLat,
+      venueLng: resolvedVenueLng,
+      ticketUrl,
+      imageUrl,
+      city: resolvedCity,
+      state: resolvedState,
+      rawJson: {
+        source: "admin_manual_create",
+        venueId: venueId || null,
+      },
+    });
 
     return res.status(201).json(event);
   } catch (err) {
