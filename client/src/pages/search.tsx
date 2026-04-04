@@ -139,7 +139,7 @@ console.log("VENUE RESULTS", venueResults);
             Search
           </h1>
           <p className="text-sm mt-1" style={{ color: "var(--muted-color)" }}>
-            Find artists, venues, and people
+            Find artists, venues, and people · API VENUE SEARCH LIVE
           </p>
         </div>
 
