@@ -1371,54 +1371,79 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
     const upcomingEvents = await storage.getUpcomingEvents(365);
 
     let updated = 0;
+    const debug: any[] = [];
 
     for (const event of upcomingEvents) {
-      if (event.venueLat != null && event.venueLng != null) continue;
+  if (event.venueLat != null && event.venueLng != null) continue;
 
-      let venue: any = null;
+  let venue: any = null;
+  let matchedBy = "none";
 
-// 1. Try rawJson venueId
-const raw = (event.rawJson ?? null) as any;
-const venueId = raw?.venueId;
+  const raw = (event.rawJson ?? null) as any;
+  const venueId = raw?.venueId;
 
-if (venueId) {
-  venue = await storage.getVenue(String(venueId));
-}
+  if (venueId) {
+    venue = await storage.getVenue(String(venueId));
+    if (venue) matchedBy = "rawJson.venueId";
+  }
 
-// 2. Fallback: match by name
-if (!venue && typeof event.venueName === "string") {
-  const eventVenueName = event.venueName.trim().toLowerCase();
-  const matchedVenues = await storage.searchVenues(event.venueName);
+  let matchedVenues: any[] = [];
 
-  venue = matchedVenues.find((v: any) => {
-    if (typeof v.name !== "string") return false;
+  if (!venue && typeof event.venueName === "string") {
+    const eventVenueName = event.venueName.trim().toLowerCase();
+    matchedVenues = await storage.searchVenues(event.venueName);
 
-    const venueName = v.name.trim().toLowerCase();
+    venue = matchedVenues.find((v: any) => {
+      if (typeof v.name !== "string") return false;
 
-    return (
-      venueName === eventVenueName ||
-      venueName.includes(eventVenueName) ||
-      eventVenueName.includes(venueName)
-    );
+      const venueName = v.name.trim().toLowerCase();
+
+      return (
+        venueName === eventVenueName ||
+        venueName.includes(eventVenueName) ||
+        eventVenueName.includes(venueName)
+      );
+    });
+
+    if (venue) matchedBy = "venueName";
+  }
+
+  debug.push({
+    eventId: event.id,
+    eventName: event.name,
+    eventVenueName: event.venueName,
+    eventVenueLat: event.venueLat,
+    eventVenueLng: event.venueLng,
+    rawVenueId: venueId ?? null,
+    matchedBy,
+    matchedVenueId: venue?.id ?? null,
+    matchedVenueName: venue?.name ?? null,
+    matchedVenueLat: venue?.lat ?? null,
+    matchedVenueLng: venue?.lng ?? null,
+    candidateVenueNames: matchedVenues.slice(0, 5).map((v: any) => v.name),
   });
+
+  if (venue?.lat != null && venue?.lng != null) {
+    await db
+      .update(events)
+      .set({
+        venueLat: venue.lat,
+        venueLng: venue.lng,
+        city: venue.city || event.city,
+        state: venue.state || event.state,
+      })
+      .where(eq(events.id, event.id));
+
+    updated++;
+  }
 }
 
-if (venue?.lat != null && venue?.lng != null) {
-  await db
-    .update(events)
-    .set({
-      venueLat: venue.lat,
-      venueLng: venue.lng,
-      city: venue.city || event.city,
-      state: venue.state || event.state,
-    })
-    .where(eq(events.id, event.id));
-
-  updated++;
-}
-    }
-
-    return res.json({ success: true, updated });
+    return res.json({
+  success: true,
+  updated,
+  checked: upcomingEvents.length,
+  debug: debug.slice(0, 20),
+});
   } catch (err) {
     console.error("BACKFILL ERROR:", err);
     return res.status(500).json({ message: "Backfill failed" });
