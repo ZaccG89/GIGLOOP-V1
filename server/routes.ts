@@ -1310,6 +1310,8 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
   }
 });
 
+  
+
    app.delete("/api/admin/venues/:id", requireAuth, async (req, res) => {
   try {
     if (req.headers["x-admin-secret"] !== "admin123") {
@@ -1351,6 +1353,68 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
   } catch (err) {
     console.error("DELETE EVENT ERROR:", err);
     return res.status(500).json({ message: "Failed" });
+  }
+});
+
+  app.post("/api/admin/backfill-event-coords", requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await storage.getUser(req.userId);
+
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const upcomingEvents = await storage.getUpcomingEvents(365);
+
+    let updated = 0;
+
+    for (const event of upcomingEvents) {
+      if (event.venueLat != null && event.venueLng != null) continue;
+
+      let venue: any = null;
+
+// 1. Try rawJson venueId
+const raw = (event.rawJson ?? null) as any;
+const venueId = raw?.venueId;
+
+if (venueId) {
+  venue = await storage.getVenue(String(venueId));
+}
+
+// 2. Fallback: match by name
+if (!venue && typeof event.venueName === "string") {
+  const eventVenueName = event.venueName;
+  const matchedVenues = await storage.searchVenues(eventVenueName);
+  venue = matchedVenues.find(
+    (v: any) =>
+      typeof v.name === "string" &&
+      v.name.toLowerCase() === eventVenueName.toLowerCase()
+  );
+}
+
+if (venue?.lat != null && venue?.lng != null) {
+  await db
+    .update(events)
+    .set({
+      venueLat: venue.lat,
+      venueLng: venue.lng,
+      city: venue.city || event.city,
+      state: venue.state || event.state,
+    })
+    .where(eq(events.id, event.id));
+
+  updated++;
+}
+    }
+
+    return res.json({ success: true, updated });
+  } catch (err) {
+    console.error("BACKFILL ERROR:", err);
+    return res.status(500).json({ message: "Backfill failed" });
   }
 });
 
