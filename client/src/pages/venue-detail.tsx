@@ -301,6 +301,8 @@ export default function VenueDetail() {
 
 // ── Compact event row for upcoming gigs list ──────────────────────────────
 function UpcomingEventRow({ event }: { event: Event }) {
+  const [, setLocation] = useLocation();
+
   const formattedDate = (() => {
     try {
       const d = new Date(event.startTime);
@@ -317,12 +319,12 @@ function UpcomingEventRow({ event }: { event: Event }) {
   return (
     <div
       data-testid={`row-upcoming-${event.id}`}
-      className="flex items-center gap-4 p-4 rounded-2xl transition-all"
+      className="flex items-center gap-4 p-4 rounded-2xl transition-all cursor-pointer"
       style={{ background: "var(--surface)", border: "1px solid var(--border-raw)" }}
+      onClick={() => setLocation(`/events/${event.id}`)}
       onMouseEnter={e => (e.currentTarget.style.borderColor = "rgba(155,92,255,0.35)")}
       onMouseLeave={e => (e.currentTarget.style.borderColor = "var(--border-raw)")}
     >
-      {/* Date block */}
       {formattedDate && (
         <div className="flex-shrink-0 w-14 text-center">
           <p className="text-xs font-semibold uppercase" style={{ color: "var(--purple)" }}>{formattedDate.day}</p>
@@ -331,10 +333,8 @@ function UpcomingEventRow({ event }: { event: Event }) {
         </div>
       )}
 
-      {/* Divider */}
       <div className="w-px h-12 flex-shrink-0" style={{ background: "var(--border-raw)" }} />
 
-      {/* Thumbnail */}
       <div className="flex-shrink-0 w-14 h-14 rounded-xl overflow-hidden" style={{ background: "#0B0E16" }}>
         {event.imageUrl ? (
           <img src={event.imageUrl} alt={event.name} className="w-full h-full object-cover opacity-85" />
@@ -345,21 +345,21 @@ function UpcomingEventRow({ event }: { event: Event }) {
         )}
       </div>
 
-      {/* Info */}
       <div className="flex-1 min-w-0">
         <p className="font-semibold truncate" style={{ color: "var(--silver)" }}>{event.name}</p>
         {formattedDate && (
           <p className="text-sm mt-0.5" style={{ color: "var(--muted-color)" }}>{formattedDate.time}</p>
         )}
         {event.status === "onsale" && (
-          <span className="text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block"
-            style={{ background: "rgba(155,92,255,0.15)", color: "var(--purple)" }}>
+          <span
+            className="text-[10px] font-bold px-1.5 py-0.5 rounded mt-1 inline-block"
+            style={{ background: "rgba(155,92,255,0.15)", color: "var(--purple)" }}
+          >
             On Sale
           </span>
         )}
       </div>
 
-      {/* Ticket link */}
       {event.ticketUrl && (
         <a
           href={event.ticketUrl}
