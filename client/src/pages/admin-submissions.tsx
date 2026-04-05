@@ -65,6 +65,7 @@ export default function AdminSubmissions() {
   city: "",
   state: "",
 });
+const [createEventError, setCreateEventError] = useState("");
 
 const [venueQuery, setVenueQuery] = useState("");
 const [venueResults, setVenueResults] = useState<Venue[]>([]);
@@ -246,9 +247,9 @@ const createEvent = useMutation({
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-  ...form,
-  startTime: new Date(form.startTime).toISOString(),
-}),
+        ...form,
+        startTime: new Date(form.startTime).toISOString(),
+      }),
     });
 
     const data = await res.json().catch(() => ({}));
@@ -260,25 +261,28 @@ const createEvent = useMutation({
     return data;
   },
   onSuccess: async () => {
+    setCreateEventError("");
     setForm({
-  name: "",
-  startTime: "",
-  venueId: "",
-  venueName: "",
-  venueLat: "",
-  venueLng: "",
-  ticketUrl: "",
-  imageUrl: "",
-  city: "",
-  state: "",
-});
-setVenueQuery("");
-setVenueResults([]);
+      name: "",
+      startTime: "",
+      venueId: "",
+      venueName: "",
+      venueLat: "",
+      venueLng: "",
+      ticketUrl: "",
+      imageUrl: "",
+      city: "",
+      state: "",
+    });
+    setVenueQuery("");
+    setVenueResults([]);
 
-    // 🔥 THIS IS THE FIX
     await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
 
     alert("Event created");
+  },
+  onError: (error: any) => {
+    setCreateEventError(error?.message || "Failed to create event");
   },
 });
 
@@ -789,12 +793,25 @@ setVenueResults([]);
 
     <div className="pt-2">
       <Button
-        onClick={() => createEvent.mutate()}
-        disabled={createEvent.isPending || !form.name || !form.startTime || !form.venueName}
-        className="w-full md:w-auto"
-      >
+  onClick={() => createEvent.mutate()}
+  disabled={
+    createEvent.isPending ||
+    !form.name ||
+    !form.startTime ||
+    !form.venueName ||
+    !form.venueId ||
+    !form.venueLat ||
+    !form.venueLng
+  }
+  className="w-full md:w-auto"
+>
         {createEvent.isPending ? "Creating..." : "Create Event"}
       </Button>
+      {createEventError && (
+  <p className="text-sm text-red-400 mt-2">
+    {createEventError}
+  </p>
+)}
     </div>
   </div>
 </Card>
