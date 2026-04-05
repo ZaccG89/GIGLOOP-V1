@@ -354,17 +354,35 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertVenue(venue: InsertVenue): Promise<Venue> {
-    const [upserted] = await db
-      .insert(venues)
-      .values(venue)
-      .onConflictDoUpdate({
-        target: venues.id,
-        set: venue,
-      })
-      .returning();
+  const clean = {
+    name: venue.name,
+    address: venue.address ?? null,
+    suburb: venue.suburb ?? null,
+    city: venue.city ?? null,
+    state: venue.state ?? null,
+    postcode: venue.postcode ?? null,
+    website: venue.website ?? null,
+    instagram: venue.instagram ?? null,
+    contactEmail: venue.contactEmail ?? null,
+    bio: venue.bio ?? null,
+    lat: venue.lat ?? null,
+    lng: venue.lng ?? null,
+  };
 
-    return upserted;
-  }
+  const [upserted] = await db
+    .insert(venues)
+    .values({
+      id: venue.id,
+      ...clean,
+    })
+    .onConflictDoUpdate({
+      target: venues.id,
+      set: clean,
+    })
+    .returning();
+
+  return upserted;
+}
 
   async registerVenueAccount(
     userId: string,
