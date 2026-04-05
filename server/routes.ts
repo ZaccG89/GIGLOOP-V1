@@ -1390,10 +1390,10 @@ if (!venue && typeof event.venueName === "string") {
   const eventVenueName = event.venueName;
   const matchedVenues = await storage.searchVenues(eventVenueName);
   venue = matchedVenues.find(
-    (v: any) =>
-      typeof v.name === "string" &&
-      v.name.toLowerCase() === eventVenueName.toLowerCase()
-  );
+  (v: any) =>
+    typeof v.name === "string" &&
+    v.name.toLowerCase().includes(eventVenueName.toLowerCase())
+);
 }
 
 if (venue?.lat != null && venue?.lng != null) {
