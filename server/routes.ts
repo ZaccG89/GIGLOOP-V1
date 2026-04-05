@@ -1392,7 +1392,11 @@ if (!venue && typeof event.venueName === "string") {
   venue = matchedVenues.find(
   (v: any) =>
     typeof v.name === "string" &&
-    v.name.toLowerCase().includes(eventVenueName.toLowerCase())
+    (
+      v.name.toLowerCase() === eventVenueName.toLowerCase() ||
+      v.name.toLowerCase().includes(eventVenueName.toLowerCase()) ||
+      eventVenueName.toLowerCase().includes(v.name.toLowerCase())
+    )
 );
 }
 
