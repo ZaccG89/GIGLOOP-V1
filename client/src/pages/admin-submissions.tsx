@@ -315,14 +315,17 @@ const createEvent = useMutation({
             <div className="relative">
   <label className="block text-sm font-bold text-white mb-2">Venue Search</label>
   <Input
-    value={venueQuery}
-    onChange={(e) => {
-      const value = e.target.value;
-      setVenueQuery(value);
-      setForm({ ...form, venueName: value });
-         }}
-    placeholder="Search venue name"
-  />
+  value={venueQuery}
+  onChange={(e) => {
+    const value = e.target.value;
+
+    setVenueQuery(value);
+    setVenueForm((prev) => ({
+      ...prev,
+      name: value,
+    }));
+  }}
+/>
 
   {venueQuery.trim().length >= 2 && (
   <div className="mt-2 rounded-xl border border-white/10 bg-[#0b1020] shadow-xl overflow-hidden">
@@ -460,21 +463,15 @@ const createEvent = useMutation({
 <div className="relative">
   <label className="block text-sm font-bold text-white mb-2">Venue Name</label>
   <Input
-    value={venueQuery}
+    value={venueForm.name}
     onChange={(e) => {
       const value = e.target.value;
-      setVenueQuery(value);
-      setForm({
-        ...form,
-        venueId: "",
-        venueName: value,
-        venueLat: "",
-        venueLng: "",
-        city: "",
-        state: "",
+      setVenueForm({
+        ...venueForm,
+        name: value,
       });
     }}
-    placeholder="Search venue name"
+    placeholder="Venue name"
   />
 
   {venueQuery.trim().length >= 2 && (
@@ -486,14 +483,11 @@ const createEvent = useMutation({
           type="button"
           className="w-full px-4 py-3 text-left hover:bg-white/5"
           onClick={() => {
-            setForm({
-              ...form,
-              venueId: "",
-              venueName: venueQuery.trim(),
-              venueLat: "",
-              venueLng: "",
-            });
-          }}
+          setVenueForm({
+          ...venueForm,
+          name: venueForm.name.trim(),
+  });
+}}
         >
           <div className="text-white font-medium">Use "{venueQuery}"</div>
           <div className="text-xs text-white/60">No linked venue selected</div>
@@ -505,18 +499,16 @@ const createEvent = useMutation({
             type="button"
             className="block w-full px-4 py-3 text-left hover:bg-white/5 border-b border-white/5 last:border-b-0"
             onClick={() => {
-              setVenueQuery(venue.name || "");
-              setVenueResults([]);
-              setForm({
-                ...form,
-                venueId: venue.id,
-                venueName: venue.name || "",
-                venueLat: venue.lat != null ? String(venue.lat) : "",
-                venueLng: venue.lng != null ? String(venue.lng) : "",
-                city: venue.city || "",
-                state: venue.state || "",
-              });
-            }}
+            setVenueForm({
+             ...venueForm,
+           name: venue.name || "",
+           lat: venue.lat != null ? String(venue.lat) : "",
+           lng: venue.lng != null ? String(venue.lng) : "",
+           city: venue.city || "",
+           state: venue.state || "",
+           });
+           setVenueResults([]);
+          }}
           >
             <div className="font-medium text-white">{venue.name}</div>
             <div className="text-xs text-white/60">
