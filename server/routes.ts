@@ -1201,14 +1201,14 @@ const sessionToken = await createSession(userId);
     let resolvedState = state;
 
     if (venueId) {
-      const venue = await storage.getVenue(String(venueId));
+      const linkedVenue = await storage.getVenue(String(venueId));
 
-      if (venue) {
-        resolvedVenueName = venue.name || venueName;
-        resolvedVenueLat = venue.lat ?? resolvedVenueLat;
-        resolvedVenueLng = venue.lng ?? resolvedVenueLng;
-        resolvedCity = venue.city || resolvedCity;
-        resolvedState = venue.state || resolvedState;
+      if (linkedVenue) {
+        resolvedVenueName = linkedVenue.name || venueName;
+        resolvedVenueLat = linkedVenue.lat ?? resolvedVenueLat;
+        resolvedVenueLng = linkedVenue.lng ?? resolvedVenueLng;
+        resolvedCity = linkedVenue.city || resolvedCity;
+        resolvedState = linkedVenue.state || resolvedState;
       }
     }
 
