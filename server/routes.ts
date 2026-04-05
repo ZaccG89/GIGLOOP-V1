@@ -1387,17 +1387,20 @@ if (venueId) {
 
 // 2. Fallback: match by name
 if (!venue && typeof event.venueName === "string") {
-  const eventVenueName = event.venueName;
-  const matchedVenues = await storage.searchVenues(eventVenueName);
-  venue = matchedVenues.find(
-  (v: any) =>
-    typeof v.name === "string" &&
-    (
-      v.name.toLowerCase() === eventVenueName.toLowerCase() ||
-      v.name.toLowerCase().includes(eventVenueName.toLowerCase()) ||
-      eventVenueName.toLowerCase().includes(v.name.toLowerCase())
-    )
-);
+  const eventVenueName = event.venueName.trim().toLowerCase();
+  const matchedVenues = await storage.searchVenues(event.venueName);
+
+  venue = matchedVenues.find((v: any) => {
+    if (typeof v.name !== "string") return false;
+
+    const venueName = v.name.trim().toLowerCase();
+
+    return (
+      venueName === eventVenueName ||
+      venueName.includes(eventVenueName) ||
+      eventVenueName.includes(venueName)
+    );
+  });
 }
 
 if (venue?.lat != null && venue?.lng != null) {
