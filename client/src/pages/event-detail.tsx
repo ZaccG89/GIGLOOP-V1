@@ -280,13 +280,22 @@ export default function EventDetail() {
           </div>
 
           {isAdmin && (
-            <button
-              onClick={handleDelete}
-              className="mt-2 px-4 py-2 bg-red-600 text-white rounded-xl"
-            >
-              Delete Event
-            </button>
-          )}
+  <div className="flex gap-2 mt-4">
+    <button
+      onClick={() => window.location.href = `/admin-submissions?edit=${event.id}`}
+      className="px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition"
+    >
+      Edit Event
+    </button>
+
+    <button
+      onClick={handleDelete}
+      className="px-4 py-2 rounded-lg bg-red-600 text-white font-medium hover:bg-red-500 transition"
+    >
+      Delete
+    </button>
+  </div>
+)}
 
           <div className="pt-1">
             {ticketUrl ? (
