@@ -723,12 +723,11 @@ app.get("/api/auth/spotify/status", requireAuth, async (req: any, res: Response)
         return res.status(400).json({ message: "artistName required" });
       }
 
-      const normalized = normalizeName(artistName.trim());
 
       await storage.upsertUserArtists([
         {
           userId: req.userId,
-          spotifyArtistId: `manual-${normalized}`,
+          spotifyArtistId: `manual-${artistName.trim().toLowerCase()}`,
           artistName: artistName.trim(),
           affinityScore: 0.8,
           source: "manual",
@@ -1390,25 +1389,25 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
   let matchedVenues: any[] = [];
 
   if (!venue && typeof event.venueName === "string") {
-    const eventVenueName = event.venueName.trim().toLowerCase();
-    matchedVenues = await storage.searchVenues(event.venueName);
+  const eventVenueName = normalizeName(event.venueName.trim());
+  const matchedVenues = await storage.searchVenues(event.venueName.trim());
 
-    venue = matchedVenues.find((v: any) => {
-      if (typeof v.name !== "string") return false;
+  venue = matchedVenues.find((v: any) => {
+    if (typeof v.name !== "string") return false;
 
-      const venueName = v.name.trim().toLowerCase();
+    const venueName = normalizeName(v.name.trim());
 
-      return (
-        venueName === eventVenueName ||
-        venueName.includes(eventVenueName) ||
-        eventVenueName.includes(venueName)
-      );
-    });
+    return (
+      venueName === eventVenueName ||
+      venueName.includes(eventVenueName) ||
+      eventVenueName.includes(venueName)
+    );
+  });
 
-    if (venue) matchedBy = "venueName";
-  }
+  if (venue) matchedBy = "venueName";
+}
 
-  debug.push({
+    debug.push({
     eventId: event.id,
     eventName: event.name,
     eventVenueName: event.venueName,
