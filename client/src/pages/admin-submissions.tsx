@@ -181,6 +181,56 @@ useEffect(() => {
 }, [editEventId]);
 
 useEffect(() => {
+  const loadEditEvent = async () => {
+    if (!editEventId) return;
+
+    try {
+      setEditEventLoading(true);
+      setCreateEventError("");
+
+      const res = await fetch(`/api/events/${editEventId}`, {
+        credentials: "include",
+      });
+
+      if (!res.ok) {
+        throw new Error("Failed to load event");
+      }
+
+      const data = await res.json();
+      const event = data?.event;
+
+      if (!event) {
+        throw new Error("Event not found");
+      }
+
+      setForm({
+        name: event.name || "",
+        startTime: event.startTime
+          ? format(new Date(event.startTime), "yyyy-MM-dd'T'HH:mm")
+          : "",
+        venueId: event.venueId || "",
+        venueName: event.venueName || "",
+        venueLat: event.venueLat != null ? String(event.venueLat) : "",
+        venueLng: event.venueLng != null ? String(event.venueLng) : "",
+        ticketUrl: event.ticketUrl || "",
+        imageUrl: event.imageUrl || "",
+        city: event.city || "",
+        state: event.state || "",
+      });
+
+      setVenueQuery(event.venueName || "");
+      setVenueResults([]);
+    } catch (error: any) {
+      setCreateEventError(error?.message || "Failed to load event");
+    } finally {
+      setEditEventLoading(false);
+    }
+  };
+
+  loadEditEvent();
+}, [editEventId]);
+
+useEffect(() => {
   const runAdminVenueSearch = async () => {
     if (adminVenueQuery.trim().length < 2) {
       setAdminVenueResults([]);
