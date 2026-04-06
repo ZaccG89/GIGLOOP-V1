@@ -3,7 +3,7 @@ import { Layout } from "@/components/layout";
 import { Button, Card, Input } from "@/components/ui-elements";
 import { useAdminSubmissions, useApproveSubmission, useRejectSubmission } from "@/hooks/use-admin";
 import { useAuth } from "@/hooks/use-auth";
-import { useLocation } from "wouter";
+import { Link, useLocation } from "wouter";
 import { ShieldAlert, Check, X, Calendar, MapPin, Building2, Clock, CheckCircle } from "lucide-react";
 import { format } from "date-fns";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
@@ -48,10 +48,12 @@ function useRejectVenue(secret: string) {
 
 export default function AdminSubmissions() {
   const { data: user, isLoading: userLoading } = useAuth();
-  const [, setLocation] = useLocation();
   const [secret, setSecret] = useState("");
   const [activeSecret, setActiveSecret] = useState("");
   const [tab, setTab] = useState<"gigs" | "venues">("gigs");
+  const [location, setLocation] = useLocation();
+  const editEventId = new URLSearchParams(location.split("?")[1] || "").get("edit");
+  console.log("editEventId", editEventId)
 
   const [form, setForm] = useState({
   name: "",
