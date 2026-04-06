@@ -282,7 +282,7 @@ export default function EventDetail() {
           {isAdmin && (
   <div className="flex gap-2 mt-4">
     <button
-      onClick={() => window.location.href = `/admin-submissions?edit=${event.id}`}
+      onClick={() => window.location.href = `/admin/submissions?edit=${event.id}`}
       className="px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition"
     >
       Edit Event
