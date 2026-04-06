@@ -170,9 +170,20 @@ const rejectVenue = useRejectVenue("admin123");
   mutationFn: async () => {
     const payload = {
       id: selectedVenueId || undefined,
-      ...venueForm,
-      lat: venueForm.lat ? Number(venueForm.lat) : undefined,
-      lng: venueForm.lng ? Number(venueForm.lng) : undefined,
+      name: venueForm.name.trim(),
+      address: venueForm.address,
+      suburb: venueForm.suburb,
+      city: venueForm.city,
+      state: venueForm.state,
+      postcode: venueForm.postcode,
+      website: venueForm.website,
+      instagram: venueForm.instagram,
+      contactEmail: venueForm.contactEmail,
+      bio: venueForm.bio,
+      lat:
+        venueForm.lat.trim() === "" ? null : Number(venueForm.lat),
+      lng:
+        venueForm.lng.trim() === "" ? null : Number(venueForm.lng),
     };
 
     console.log("SAVE VENUE PAYLOAD", payload);
