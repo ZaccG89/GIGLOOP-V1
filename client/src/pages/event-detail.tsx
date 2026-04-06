@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useRoute } from "wouter";
+import { Link, useLocation, useRoute } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
 import { useGuestLock } from "@/hooks/use-guest-lock";
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
@@ -21,7 +21,8 @@ export default function EventDetail() {
   const [notFound, setNotFound] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [event, setEvent] = useState<any>(null);
-
+  const [, setLocation] = useLocation();
+  
   const {
     guestLockOpen,
     setGuestLockOpen,
@@ -282,7 +283,7 @@ export default function EventDetail() {
           {isAdmin && (
   <div className="flex gap-2 mt-4">
     <button
-      onClick={() => window.location.href = `/admin/submissions?edit=${event.id}`}
+      onClick={() => setLocation(`/admin/submissions?edit=${event.id}`)}
       className="px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition"
     >
       Edit Event
