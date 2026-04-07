@@ -315,8 +315,16 @@ const deleteVenue = useMutation({
 
 const createEvent = useMutation({
   mutationFn: async () => {
-    const res = await fetch("/api/admin/events/create", {
-      method: "POST",
+    const isEdit = !!editEventId;
+
+    const url = isEdit
+      ? `/api/admin/events/${editEventId}`
+      : "/api/admin/events/create";
+
+    const method = isEdit ? "PUT" : "POST";
+
+    const res = await fetch(url, {
+      method,
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
@@ -330,13 +338,14 @@ const createEvent = useMutation({
     const data = await res.json().catch(() => ({}));
 
     if (!res.ok) {
-      throw new Error(data?.message || "Failed to create event");
+      throw new Error(data?.message || "Failed to save event");
     }
 
     return data;
   },
   onSuccess: async () => {
     setCreateEventError("");
+
     setForm({
       name: "",
       startTime: "",
@@ -349,15 +358,20 @@ const createEvent = useMutation({
       city: "",
       state: "",
     });
+
     setVenueQuery("");
     setVenueResults([]);
 
     await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
 
-    alert("Event created");
+    alert(editEventId ? "Event updated" : "Event created");
+
+    if (editEventId) {
+      setLocation("/"); // or wherever you want after edit
+    }
   },
   onError: (error: any) => {
-    setCreateEventError(error?.message || "Failed to create event");
+    setCreateEventError(error?.message || "Failed to save event");
   },
 });
   useEffect(() => {
@@ -825,7 +839,13 @@ const createEvent = useMutation({
   }
   className="w-full md:w-auto"
 >
-        {createEvent.isPending ? "Creating..." : "Create Event"}
+        {createEvent.isPending
+  ? editEventId
+    ? "Updating..."
+    : "Creating..."
+  : editEventId
+  ? "Update Event"
+  : "Create Event"}
       </Button>
       {createEventError && (
   <p className="text-sm text-red-400 mt-2">
