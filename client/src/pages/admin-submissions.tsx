@@ -52,7 +52,7 @@ export default function AdminSubmissions() {
   const [activeSecret, setActiveSecret] = useState("");
   const [tab, setTab] = useState<"gigs" | "venues">("gigs");
   const [location, setLocation] = useLocation();
-  const editEventId = new URLSearchParams(location.split("?")[1] || "").get("edit");
+  const editEventId = new URLSearchParams(window.location.search).get("edit");
   
   console.log("editEventId", editEventId)
   const [editEventLoading, setEditEventLoading] = useState(false);
