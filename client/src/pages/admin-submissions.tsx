@@ -328,6 +328,7 @@ const createEvent = useMutation({
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        "x-admin-secret": "admin123",
       },
       body: JSON.stringify({
         ...form,
