@@ -833,7 +833,8 @@ const createEvent = useMutation({
   createEvent.isPending ||
   !form.name ||
   !form.startTime ||
-  !form.venueName
+  !form.venueName ||
+  (!editEventId && (!form.venueId || !form.venueLat || !form.venueLng))
 }
   className="w-full md:w-auto"
 >

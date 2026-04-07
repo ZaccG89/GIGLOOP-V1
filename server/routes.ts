@@ -1247,6 +1247,91 @@ const sessionToken = await createSession(userId);
   }
 });
 
+app.put("/api/admin/events/:id", requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await storage.getUser(req.userId);
+
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const { id } = req.params;
+
+    const {
+      name,
+      startTime,
+      venueId,
+      venueName,
+      venueLat,
+      venueLng,
+      ticketUrl,
+      imageUrl,
+      city,
+      state,
+    } = req.body;
+
+    if (!name || !startTime || !venueName) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    let resolvedVenueName = venueName;
+    let resolvedVenueLat =
+      venueLat === "" || venueLat == null ? undefined : Number(venueLat);
+    let resolvedVenueLng =
+      venueLng === "" || venueLng == null ? undefined : Number(venueLng);
+    let resolvedCity = city;
+    let resolvedState = state;
+
+    if (venueId) {
+      const linkedVenue = await storage.getVenue(String(venueId));
+
+      if (linkedVenue) {
+        resolvedVenueName = linkedVenue.name || venueName;
+        resolvedVenueLat = linkedVenue.lat ?? resolvedVenueLat;
+        resolvedVenueLng = linkedVenue.lng ?? resolvedVenueLng;
+        resolvedCity = linkedVenue.city || resolvedCity;
+        resolvedState = linkedVenue.state || resolvedState;
+      }
+    }
+
+    if (
+      resolvedVenueLat == null ||
+      resolvedVenueLng == null ||
+      Number.isNaN(resolvedVenueLat) ||
+      Number.isNaN(resolvedVenueLng)
+    ) {
+      return res.status(400).json({
+        message: "Please select a saved venue with valid coordinates",
+      });
+    }
+
+    const updatedEvent = await (storage as any).updateEvent(id, {
+      name,
+      startTime: new Date(startTime),
+      venueName: resolvedVenueName,
+      venueLat: resolvedVenueLat,
+      venueLng: resolvedVenueLng,
+      ticketUrl,
+      imageUrl,
+      city: resolvedCity,
+      state: resolvedState,
+      rawJson: {
+        source: "admin_manual_update",
+        venueId: venueId || null,
+      },
+    });
+
+    return res.json(updatedEvent);
+  } catch (error) {
+    console.error("ADMIN EVENT UPDATE ERROR", error);
+    return res.status(500).json({ message: "Failed to update event" });
+  }
+});
+
 app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Response) => {
   try {
     const {
