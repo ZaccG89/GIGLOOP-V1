@@ -323,19 +323,27 @@ const createEvent = useMutation({
 
     const method = isEdit ? "PUT" : "POST";
 
+    const payload = {
+      ...form,
+      startTime: new Date(form.startTime).toISOString(),
+    };
+
+    console.log("EVENT SAVE URL", url);
+    console.log("EVENT SAVE METHOD", method);
+    console.log("EVENT SAVE PAYLOAD", payload);
+
     const res = await fetch(url, {
       method,
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
+        "x-admin-secret": "admin123",
       },
-      body: JSON.stringify({
-        ...form,
-        startTime: new Date(form.startTime).toISOString(),
-      }),
+      body: JSON.stringify(payload),
     });
 
     const data = await res.json().catch(() => ({}));
+    console.log("EVENT SAVE RESPONSE", data);
 
     if (!res.ok) {
       throw new Error(data?.message || "Failed to save event");
@@ -346,31 +354,30 @@ const createEvent = useMutation({
   onSuccess: async () => {
     setCreateEventError("");
 
-    setForm({
-      name: "",
-      startTime: "",
-      venueId: "",
-      venueName: "",
-      venueLat: "",
-      venueLng: "",
-      ticketUrl: "",
-      imageUrl: "",
-      city: "",
-      state: "",
-    });
-
-    setVenueQuery("");
-    setVenueResults([]);
-
     await queryClient.invalidateQueries({ queryKey: ["/api/feed"] });
+    await queryClient.invalidateQueries({ queryKey: ["/api/events"] });
 
     alert(editEventId ? "Event updated" : "Event created");
 
-    if (editEventId) {
-      setLocation("/"); // or wherever you want after edit
+    if (!editEventId) {
+      setForm({
+        name: "",
+        startTime: "",
+        venueId: "",
+        venueName: "",
+        venueLat: "",
+        venueLng: "",
+        ticketUrl: "",
+        imageUrl: "",
+        city: "",
+        state: "",
+      });
+      setVenueQuery("");
+      setVenueResults([]);
     }
   },
   onError: (error: any) => {
+    console.error("EVENT SAVE ERROR", error);
     setCreateEventError(error?.message || "Failed to save event");
   },
 });
