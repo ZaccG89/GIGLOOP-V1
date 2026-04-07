@@ -1530,17 +1530,25 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
   });
 
   if (venue?.lat != null && venue?.lng != null) {
-    await db
-      .update(events)
-      .set({
-        venueLat: venue.lat,
-        venueLng: venue.lng,
-        city: venue.city || event.city,
-        state: venue.state || event.state,
-      })
-      .where(eq(events.id, event.id));
+  const existingRaw =
+    event.rawJson && typeof event.rawJson === "object" ? event.rawJson : {};
 
-    updated++;
+  await db
+    .update(events)
+    .set({
+      venueName: venue.name || event.venueName,
+      venueLat: venue.lat,
+      venueLng: venue.lng,
+      city: venue.city || event.city,
+      state: venue.state || event.state,
+      rawJson: {
+        ...existingRaw,
+        venueId: venue.id,
+      },
+    })
+    .where(eq(events.id, event.id));
+
+  updated++;
   }
 }
 
