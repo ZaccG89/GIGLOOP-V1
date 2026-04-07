@@ -830,12 +830,14 @@ const createEvent = useMutation({
       <Button
   onClick={() => createEvent.mutate()}
   disabled={
-  createEvent.isPending ||
-  !form.name ||
-  !form.startTime ||
-  !form.venueName ||
-  (!editEventId && (!form.venueId || !form.venueLat || !form.venueLng))
-}
+    createEvent.isPending ||
+    !form.name ||
+    !form.startTime ||
+    !form.venueName ||
+    !form.venueId ||
+    !form.venueLat ||
+    !form.venueLng
+  }
   className="w-full md:w-auto"
 >
         {createEvent.isPending
