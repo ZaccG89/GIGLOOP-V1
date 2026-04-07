@@ -1354,8 +1354,18 @@ app.put("/api/admin/events/:id", requireAuth, async (req: any, res: Response) =>
   }
 });
 
-app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Response) => {
+app.post("/api/admin/venues/upsert", requireAuth, async (req: any, res: Response) => {
   try {
+    const user = await storage.getUser(req.userId);
+
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
     const {
       id,
       name,
@@ -1376,11 +1386,8 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
       return res.status(400).json({ message: "Venue name is required" });
     }
 
-    const parsedLat =
-      lat === "" || lat == null ? null : Number(lat);
-
-    const parsedLng =
-      lng === "" || lng == null ? null : Number(lng);
+    const parsedLat = lat === "" || lat == null ? null : Number(lat);
+    const parsedLng = lng === "" || lng == null ? null : Number(lng);
 
     if (
       parsedLat == null ||
@@ -1415,7 +1422,6 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
     return res.status(500).json({ message: "Failed to upsert venue" });
   }
 });
-
   
 
    app.delete("/api/admin/venues/:id", requireAuth, async (req, res) => {
