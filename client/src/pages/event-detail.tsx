@@ -22,7 +22,7 @@ export default function EventDetail() {
   const [error, setError] = useState<string | null>(null);
   const [event, setEvent] = useState<any>(null);
   const [, setLocation] = useLocation();
-  
+
   const {
     guestLockOpen,
     setGuestLockOpen,
@@ -283,7 +283,11 @@ export default function EventDetail() {
           {isAdmin && (
   <div className="flex gap-2 mt-4">
     <button
-      onClick={() => setLocation(`/admin/submissions?edit=${event.id}`)}
+      onClick={() => {
+  console.log("edit click event id", event.id);
+  window.history.pushState({}, "", `/admin/submissions?edit=${event.id}`);
+  window.dispatchEvent(new PopStateEvent("popstate"));
+}}
       className="px-4 py-2 rounded-lg bg-purple-600 text-white font-medium hover:bg-purple-500 transition"
     >
       Edit Event
