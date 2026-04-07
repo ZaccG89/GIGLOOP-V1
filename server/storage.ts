@@ -43,6 +43,8 @@ import {
   count,
 } from "drizzle-orm";
 
+import { normalizeName } from "./feedService";
+
 export interface IStorage {
   // Users
   getUser(id: string): Promise<User | undefined>;
@@ -354,6 +356,8 @@ export class DatabaseStorage implements IStorage {
   }
 
   async upsertVenue(venue: InsertVenue): Promise<Venue> {
+
+    
   const clean = {
     name: venue.name,
     address: venue.address ?? null,
@@ -368,7 +372,8 @@ export class DatabaseStorage implements IStorage {
     lat: venue.lat ?? null,
     lng: venue.lng ?? null,
   };
-
+  
+  
   const [upserted] = await db
     .insert(venues)
     .values({
@@ -383,7 +388,41 @@ export class DatabaseStorage implements IStorage {
 
   return upserted;
 }
+async backfillVenuesFromEvents(): Promise<{ created: number; skipped: number }> {
+  const allEvents = await db.select().from(events);
+  const allVenues = await db.select().from(venues);
 
+  const existingMap = new Map(
+    allVenues.map((v: any) => [normalizeName(v.name), v])
+  );
+
+  let created = 0;
+  let skipped = 0;
+
+  for (const event of allEvents) {
+    if (!event.venueName) continue;
+
+    const key = normalizeName(event.venueName);
+
+    if (existingMap.has(key)) {
+      skipped++;
+      continue;
+    }
+
+    const venue = await this.upsertVenue({
+      name: event.venueName,
+      city: event.city ?? null,
+      state: event.state ?? null,
+      lat: event.venueLat ?? null,
+      lng: event.venueLng ?? null,
+    } as any);
+
+    existingMap.set(key, venue);
+    created++;
+  }
+
+  return { created, skipped };
+}
   async registerVenueAccount(
     userId: string,
     venueData: Partial<InsertVenue>

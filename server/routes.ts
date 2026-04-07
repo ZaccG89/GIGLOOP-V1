@@ -204,6 +204,7 @@ export async function registerRoutes(
       .select({ id: events.id, providerEventId: events.providerEventId })
       .from(events)
       .where(like(events.providerEventId, "demo-%"));
+      
 
     const demoEventIds = demoEvents.map((e) => e.id);
     const demoProviderEventIds = demoEvents.map((e) => e.providerEventId);
@@ -272,6 +273,27 @@ export async function registerRoutes(
   } catch (e: any) {
     console.error("Demo cleanup error:", e);
     return res.status(500).json({ ok: false, message: e.message });
+  }
+});
+
+  app.post("/api/admin/venues/backfill-from-events", requireAuth, async (req: any, res: Response) => {
+  try {
+    const user = await storage.getUser(req.userId);
+
+    if (
+      (user as any)?.role !== "admin" &&
+      !(user as any)?.email?.includes("admin") &&
+      (user as any)?.username !== "Admin"
+    ) {
+      return res.status(403).json({ message: "Admin only" });
+    }
+
+    const result = await storage.backfillVenuesFromEvents();
+
+    res.json({ success: true, ...result });
+  } catch (err) {
+    console.error(err);
+    res.status(500).json({ message: "Backfill failed" });
   }
 });
 
