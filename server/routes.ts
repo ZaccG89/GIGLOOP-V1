@@ -1529,7 +1529,7 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
     candidateVenueNames: matchedVenues.slice(0, 5).map((v: any) => v.name),
   });
 
-  if (venue?.lat != null && venue?.lng != null) {
+  if (venue) {
   const existingRaw =
     event.rawJson && typeof event.rawJson === "object" ? event.rawJson : {};
 
@@ -1537,8 +1537,8 @@ app.post("/api/admin/venues/upsert", requireAdmin, async (req: Request, res: Res
     .update(events)
     .set({
       venueName: venue.name || event.venueName,
-      venueLat: venue.lat,
-      venueLng: venue.lng,
+      venueLat: venue.lat ?? event.venueLat,
+      venueLng: venue.lng ?? event.venueLng,
       city: venue.city || event.city,
       state: venue.state || event.state,
       rawJson: {
