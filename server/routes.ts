@@ -1386,19 +1386,56 @@ app.post("/api/admin/venues/upsert", requireAuth, async (req: any, res: Response
       return res.status(400).json({ message: "Venue name is required" });
     }
 
-    const parsedLat = lat === "" || lat == null ? null : Number(lat);
-    const parsedLng = lng === "" || lng == null ? null : Number(lng);
+    let parsedLat = lat === "" || lat == null ? null : Number(lat);
+let parsedLng = lng === "" || lng == null ? null : Number(lng);
 
-    if (
-      parsedLat == null ||
-      parsedLng == null ||
-      Number.isNaN(parsedLat) ||
-      Number.isNaN(parsedLng)
-    ) {
-      return res.status(400).json({
-        message: "Venue latitude and longitude are required",
-      });
+if (
+  parsedLat == null ||
+  parsedLng == null ||
+  Number.isNaN(parsedLat) ||
+  Number.isNaN(parsedLng)
+) {
+  const locationQuery = [
+    address,
+    suburb,
+    city,
+    state,
+    postcode,
+    "Australia",
+  ]
+    .filter(Boolean)
+    .join(", ");
+
+  if (locationQuery) {
+    const geoRes = await fetch(
+      `https://nominatim.openstreetmap.org/search?format=jsonv2&limit=1&q=${encodeURIComponent(locationQuery)}`,
+      {
+        headers: {
+          "User-Agent": "GigLoop Venue Geocoder",
+        },
+      }
+    );
+
+    const geoData: any = await geoRes.json();
+    const match = geoData?.[0];
+
+    if (match) {
+      parsedLat = Number(match.lat);
+      parsedLng = Number(match.lon);
     }
+  }
+}
+
+if (
+  parsedLat == null ||
+  parsedLng == null ||
+  Number.isNaN(parsedLat) ||
+  Number.isNaN(parsedLng)
+) {
+  return res.status(400).json({
+    message: "Could not determine venue coordinates from address",
+  });
+}
 
     const venue = await storage.upsertVenue({
       id: id || undefined,
