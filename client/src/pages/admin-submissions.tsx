@@ -10,6 +10,9 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import type { Venue } from "@shared/schema";
 import { api } from "@shared/routes";
 
+const ADMIN_SECRET =
+  (import.meta.env.VITE_ADMIN_SECRET as string | undefined) || "admin123";
+
 function usePendingVenues(secret: string) {
   return useQuery<Venue[]>({
     queryKey: ["/api/admin/venues", secret],
@@ -196,7 +199,7 @@ useEffect(() => {
       const res = await fetch(
         `/api/admin/venues/all?q=${encodeURIComponent(adminVenueQuery.trim())}`,
         {
-          headers: { "x-admin-secret": "admin123" },
+          headers: { "x-admin-secret": ADMIN_SECRET },
           credentials: "include",
         }
       );
@@ -216,13 +219,13 @@ useEffect(() => {
   runAdminVenueSearch();
 }, [adminVenueQuery]);
 
-const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions("admin123");
-const approve = useApproveSubmission("admin123");
-const reject = useRejectSubmission("admin123");
+const { data: submissions, isLoading: subsLoading, isError } = useAdminSubmissions(ADMIN_SECRET);
+const approve = useApproveSubmission(ADMIN_SECRET);
+const reject = useRejectSubmission(ADMIN_SECRET);
 
-const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues("admin123");  
-const approveVenue = useApproveVenue("admin123");
-const rejectVenue = useRejectVenue("admin123");
+const { data: pendingVenues, isLoading: venuesLoading } = usePendingVenues(ADMIN_SECRET);  
+const approveVenue = useApproveVenue(ADMIN_SECRET);
+const rejectVenue = useRejectVenue(ADMIN_SECRET);
   const queryClient = useQueryClient();
   
   const saveVenue = useMutation({
@@ -252,7 +255,7 @@ const rejectVenue = useRejectVenue("admin123");
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-secret": "admin123",
+        "x-admin-secret": ADMIN_SECRET,
       },
       body: JSON.stringify(payload),
     });
@@ -280,7 +283,7 @@ const deleteVenue = useMutation({
       method: "DELETE",
       credentials: "include",
       headers: {
-        "x-admin-secret": "admin123",
+        "x-admin-secret": ADMIN_SECRET,
       },
     });
 
@@ -337,7 +340,7 @@ const createEvent = useMutation({
       credentials: "include",
       headers: {
         "Content-Type": "application/json",
-        "x-admin-secret": "admin123",
+        "x-admin-secret": ADMIN_SECRET,
       },
       body: JSON.stringify(payload),
     });

@@ -59,7 +59,9 @@ export default function Venues() {
       {isLoading ? (
         <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
           {[1,2,3,4,5,6].map(i => (
-            <Card key={i} className="h-32 animate-pulse bg-card" />
+            <Card key={i} className="h-32 animate-pulse bg-card">
+              <span className="sr-only">Loading…</span>
+            </Card>
           ))}
         </div>
       ) : venues?.length === 0 ? (

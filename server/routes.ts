@@ -38,17 +38,32 @@ const cookieOptions = {
   path: "/",
 };
 
+const AVATAR_UPLOAD_DIR = path.resolve("uploads/avatars");
+fs.mkdirSync(AVATAR_UPLOAD_DIR, { recursive: true });
+
 const avatarStorage = multer.diskStorage({
   destination: (_req, _file, cb) => {
-    const dir = path.resolve("uploads/avatars");
-    fs.mkdirSync(dir, { recursive: true });
-    cb(null, dir);
+    cb(null, AVATAR_UPLOAD_DIR);
   },
   filename: (_req, file, cb) => {
     const ext = path.extname(file.originalname) || ".jpg";
     cb(null, `${Date.now()}-${Math.random().toString(36).slice(2)}${ext}`);
   },
 });
+
+function resolveSpotifyRedirectUri(req: Request): string {
+  const fromEnv = process.env.SPOTIFY_REDIRECT_URI?.trim();
+  if (fromEnv) return fromEnv;
+  const proto =
+    (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0] ||
+    req.protocol ||
+    "https";
+  const host =
+    (req.headers["x-forwarded-host"] as string | undefined) ||
+    req.get("host") ||
+    "gigloop-v1.onrender.com";
+  return `${proto}://${host}/api/auth/spotify/callback`;
+}
 
 const avatarUpload = multer({
   storage: avatarStorage,
@@ -584,7 +599,7 @@ export async function registerRoutes(
 
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
   const clientSecret = process.env.SPOTIFY_CLIENT_SECRET!;
-  const redirectUri = "https://gigloop-v1.onrender.com/api/auth/spotify/callback";
+  const redirectUri = resolveSpotifyRedirectUri(req);
 
   try {
     // 🔹 TOKEN EXCHANGE
@@ -674,7 +689,7 @@ export async function registerRoutes(
 
 app.get("/api/auth/spotify/login", async (req: Request, res: Response) => {
   const clientId = process.env.SPOTIFY_CLIENT_ID!;
-  const redirectUri = "https://gigloop-v1.onrender.com/api/auth/spotify/callback";
+  const redirectUri = resolveSpotifyRedirectUri(req);
 
   const scope = [
     "user-read-email",
@@ -1176,8 +1191,13 @@ const sessionToken = await createSession(userId);
   });
 
   const requireAdmin = (req: Request, res: Response, next: NextFunction) => {
-    const secret = req.headers["x-admin-secret"];
     const expected = process.env.ADMIN_SECRET || "admin123";
+    if (!process.env.ADMIN_SECRET) {
+      console.warn(
+        "ADMIN_SECRET not set; falling back to default. Set ADMIN_SECRET in production."
+      );
+    }
+    const secret = req.headers["x-admin-secret"];
     if (secret !== expected) {
       return res.status(401).json({ message: "Unauthorized admin access" });
     }
@@ -1461,12 +1481,8 @@ if (
 });
   
 
-   app.delete("/api/admin/venues/:id", requireAuth, async (req, res) => {
+   app.delete("/api/admin/venues/:id", requireAuth, requireAdmin, async (req, res) => {
   try {
-    if (req.headers["x-admin-secret"] !== "admin123") {
-      return res.status(403).json({ message: "Forbidden" });
-    }
-
     const id = getParam((req.params as any).id);
 
     const existing = await storage.getVenue(id);
