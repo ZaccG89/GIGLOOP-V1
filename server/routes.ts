@@ -99,6 +99,97 @@ export async function registerRoutes(
   app.use(cookieParser());
   app.use("/uploads", express.static(path.resolve("uploads")));
 
+  function escapeHtml(value: string): string {
+    return value
+      .replace(/&/g, "&amp;")
+      .replace(/</g, "&lt;")
+      .replace(/>/g, "&gt;")
+      .replace(/"/g, "&quot;")
+      .replace(/'/g, "&#39;");
+  }
+
+  const SOCIAL_CRAWLER_REGEX =
+    /facebookexternalhit|Twitterbot|WhatsApp|Slackbot|Discordbot|LinkedInBot|TelegramBot|SkypeUriPreview|Pinterest|redditbot|Embedly|iMessageLinkPreview|developers\.google\.com\/\+\/web\/snippet|Googlebot|Bingbot|DuckDuckBot|Applebot/i;
+
+  app.get("/events/:id", async (req: Request, res: Response, next: NextFunction) => {
+    try {
+      const ua = (req.headers["user-agent"] as string | undefined) || "";
+      if (!SOCIAL_CRAWLER_REGEX.test(ua)) {
+        return next();
+      }
+
+      const event = await storage.getEventById(req.params.id);
+      if (!event) return next();
+
+      const proto =
+        (req.headers["x-forwarded-proto"] as string | undefined)?.split(",")[0] ||
+        req.protocol ||
+        "https";
+      const host =
+        (req.headers["x-forwarded-host"] as string | undefined) ||
+        req.get("host") ||
+        "gigloop-v1.onrender.com";
+      const url = `${proto}://${host}/events/${event.id}`;
+
+      const title = event.name || "Live gig on GigLoop";
+      const venue = event.venueName ? ` at ${event.venueName}` : "";
+      const when = event.startTime
+        ? new Date(event.startTime).toLocaleString("en-AU", {
+            weekday: "short",
+            month: "short",
+            day: "numeric",
+            hour: "numeric",
+            minute: "2-digit",
+            timeZone: "Australia/Brisbane",
+          })
+        : "";
+      const description =
+        [`${title}${venue}`, when, event.city]
+          .filter(Boolean)
+          .join(" • ") || "Live gigs tailored to your music taste.";
+      const safeImageUrl =
+        typeof event.imageUrl === "string" &&
+        /^https?:\/\//i.test(event.imageUrl)
+          ? event.imageUrl
+          : null;
+      const image = safeImageUrl || `${proto}://${host}/giggity-logo.png`;
+
+      const html = `<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>${escapeHtml(title)} | GigLoop</title>
+    <meta name="description" content="${escapeHtml(description)}" />
+
+    <meta property="og:type" content="event" />
+    <meta property="og:site_name" content="GigLoop" />
+    <meta property="og:title" content="${escapeHtml(title)}" />
+    <meta property="og:description" content="${escapeHtml(description)}" />
+    <meta property="og:url" content="${escapeHtml(url)}" />
+    <meta property="og:image" content="${escapeHtml(image)}" />
+    <meta property="og:image:alt" content="${escapeHtml(title)}" />
+
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="${escapeHtml(title)}" />
+    <meta name="twitter:description" content="${escapeHtml(description)}" />
+    <meta name="twitter:image" content="${escapeHtml(image)}" />
+  </head>
+  <body>
+    <h1>${escapeHtml(title)}</h1>
+    <p>${escapeHtml(description)}</p>
+    <p><a href="${escapeHtml(url)}">View on GigLoop</a></p>
+  </body>
+</html>`;
+
+      res.set("Content-Type", "text/html; charset=utf-8");
+      res.set("Cache-Control", "public, max-age=300");
+      return res.status(200).send(html);
+    } catch (err) {
+      console.error("OG render error:", err);
+      return next();
+    }
+  });
+
   const getOptionalUserId = async (req: Request): Promise<string | null> => {
     const sessionCookie =
       (req as any).cookies?.gigloop_session ??

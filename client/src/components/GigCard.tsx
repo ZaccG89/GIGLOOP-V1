@@ -189,27 +189,87 @@ export default function GigCard({
     if (!requireAuth() || shareMutation.isPending) return;
 
     const shareUrl = `${window.location.origin}/events/${event.id}`;
+    const shareTitle = event.name || "Live gig on GigLoop";
+    const shareText = `${shareTitle}${
+      event.venueName ? ` at ${event.venueName}` : ""
+    }${event.startTime ? ` — ${format(new Date(event.startTime), "EEE d MMM h:mma").replace(":00", "")}` : ""}`;
+
+    let imageFile: File | null = null;
+    if (event.imageUrl && /^https?:\/\//i.test(event.imageUrl)) {
+      try {
+        const ctrl = new AbortController();
+        const timer = setTimeout(() => ctrl.abort(), 4000);
+        const imgRes = await fetch(event.imageUrl, {
+          mode: "cors",
+          signal: ctrl.signal,
+        });
+        clearTimeout(timer);
+        if (imgRes.ok) {
+          const blob = await imgRes.blob();
+          if (blob.size > 0 && blob.size <= 8 * 1024 * 1024) {
+            const ext = (blob.type.split("/")[1] || "jpg").replace(
+              "jpeg",
+              "jpg"
+            );
+            const safeName =
+              (event.name || "gig")
+                .replace(/[^a-z0-9]+/gi, "-")
+                .slice(0, 40) || "gig";
+            imageFile = new File([blob], `${safeName}.${ext}`, {
+              type: blob.type || "image/jpeg",
+            });
+          }
+        }
+      } catch (err) {
+        console.warn("Could not fetch image for share:", err);
+      }
+    }
 
     try {
-      if (navigator.share) {
+      const canShareFiles =
+        imageFile != null &&
+        typeof (navigator as any).canShare === "function" &&
+        (navigator as any).canShare({ files: [imageFile] });
+
+      if (canShareFiles) {
         await navigator.share({
-          title: event.name,
-          text: `Check out ${event.name}${
-            event.venueName ? ` at ${event.venueName}` : ""
-          }`,
+          title: shareTitle,
+          text: shareText,
+          url: shareUrl,
+          files: [imageFile!],
+        } as any);
+      } else if (navigator.share) {
+        await navigator.share({
+          title: shareTitle,
+          text: shareText,
           url: shareUrl,
         });
       } else {
-        await navigator.clipboard.writeText(shareUrl);
+        await navigator.clipboard.writeText(`${shareText}\n${shareUrl}`);
         toast({ title: "Link copied to clipboard" });
       }
 
       shareMutation.mutate();
-    } catch (error) {
-      console.error("Share failed", error);
+    } catch (error: any) {
+      if (error?.name !== "AbortError") {
+        console.error("Share failed", error);
+        toast({
+          title: "Share failed",
+          description: "Try again in a sec.",
+        });
+      }
     }
   },
-  [event.id, event.name, event.venueName, requireAuth, shareMutation, toast]
+  [
+    event.id,
+    event.name,
+    event.venueName,
+    event.imageUrl,
+    event.startTime,
+    requireAuth,
+    shareMutation,
+    toast,
+  ]
 );
   
   const handleTickets = (e: React.MouseEvent) => {
