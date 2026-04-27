@@ -1246,10 +1246,10 @@ const sessionToken = await createSession(userId);
 
       if (linkedVenue) {
         resolvedVenueName = linkedVenue.name || venueName;
-        resolvedVenueLat = linkedVenue.lat ?? resolvedVenueLat;
-        resolvedVenueLng = linkedVenue.lng ?? resolvedVenueLng;
-        resolvedCity = linkedVenue.city || resolvedCity;
-        resolvedState = linkedVenue.state || resolvedState;
+        resolvedVenueLat = resolvedVenueLat ?? linkedVenue.lat ?? undefined;
+        resolvedVenueLng = resolvedVenueLng ?? linkedVenue.lng ?? undefined;
+        resolvedCity = resolvedCity || linkedVenue.city || undefined;
+        resolvedState = resolvedState || linkedVenue.state || undefined;
       }
     }
 
@@ -1260,7 +1260,8 @@ const sessionToken = await createSession(userId);
       Number.isNaN(resolvedVenueLng)
     ) {
       return res.status(400).json({
-        message: "Please select a saved venue with valid coordinates",
+        message:
+          "Missing venue coordinates. Either pick a saved venue with lat/lng, or enter them manually in the form.",
       });
     }
 
@@ -1281,6 +1282,22 @@ const sessionToken = await createSession(userId);
         venueId: venueId || null,
       },
     });
+
+    if (venueId) {
+      const linkedVenue = await storage.getVenue(String(venueId));
+      if (linkedVenue && (linkedVenue.lat == null || linkedVenue.lng == null)) {
+        try {
+          await storage.upsertVenue({
+            id: linkedVenue.id,
+            name: linkedVenue.name,
+            lat: resolvedVenueLat,
+            lng: resolvedVenueLng,
+          } as any);
+        } catch (e) {
+          console.warn("Failed to backfill venue coords:", e);
+        }
+      }
+    }
 
     return res.status(201).json(event);
   } catch (err) {

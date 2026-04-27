@@ -833,6 +833,34 @@ const createEvent = useMutation({
           placeholder="QLD"
         />
       </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">
+          Venue Latitude
+        </label>
+        <Input
+          value={form.venueLat}
+          onChange={(e) => setForm({ ...form, venueLat: e.target.value })}
+          placeholder="-27.4698"
+        />
+        <p className="text-xs text-white/50 mt-1">
+          Auto-fills from selected venue. Edit if missing or wrong.
+        </p>
+      </div>
+
+      <div>
+        <label className="block text-sm font-bold text-white mb-2">
+          Venue Longitude
+        </label>
+        <Input
+          value={form.venueLng}
+          onChange={(e) => setForm({ ...form, venueLng: e.target.value })}
+          placeholder="153.0251"
+        />
+        <p className="text-xs text-white/50 mt-1">
+          Auto-fills from selected venue. Edit if missing or wrong.
+        </p>
+      </div>
     </div>
 
     <div className="pt-2">
@@ -843,7 +871,8 @@ const createEvent = useMutation({
   !form.name ||
   !form.startTime ||
   !form.venueName ||
-  (!editEventId && (!form.venueId || !form.venueLat || !form.venueLng))
+  (!editEventId && !form.venueLat) ||
+  (!editEventId && !form.venueLng)
 }
   className="w-full md:w-auto"
 >
