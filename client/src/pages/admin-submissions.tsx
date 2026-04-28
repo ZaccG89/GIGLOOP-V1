@@ -567,6 +567,7 @@ const createEvent = useMutation({
       Search and edit existing venues or create new ones.
     </p>
     <BackfillVenueCoordsButton />
+    <ImportOsmVenuesButton />
   </div>
 
   <Button
@@ -1242,6 +1243,250 @@ function BackfillVenueCoordsButton() {
           Updated: {totals.updated} · Failed: {totals.failed} · Skipped:{" "}
           {totals.skipped}
           {totals.remaining != null && ` · Remaining: ${totals.remaining}`}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// SE Queensland bounding box (S, W, N, E)
+// Stretches from north of the Sunshine Coast down to the NSW border,
+// and from Toowoomba east to North Stradbroke Island.
+const SEQ_BBOX = "-28.40,151.80,-26.20,153.70";
+
+const OSM_AMENITY_QUERY = `
+[out:json][timeout:180];
+(
+  node["amenity"~"^(bar|pub|nightclub|biergarten|events_venue)$"](${SEQ_BBOX});
+  way["amenity"~"^(bar|pub|nightclub|biergarten|events_venue)$"](${SEQ_BBOX});
+  node["club"="music"](${SEQ_BBOX});
+  way["club"="music"](${SEQ_BBOX});
+  node["amenity"="theatre"](${SEQ_BBOX});
+  way["amenity"="theatre"](${SEQ_BBOX});
+  node["amenity"="restaurant"]["microbrewery"="yes"](${SEQ_BBOX});
+  way["amenity"="restaurant"]["microbrewery"="yes"](${SEQ_BBOX});
+  node["amenity"]["live_music"="yes"](${SEQ_BBOX});
+  way["amenity"]["live_music"="yes"](${SEQ_BBOX});
+);
+out center tags;
+`.trim();
+
+function ImportOsmVenuesButton() {
+  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState("");
+  const [totals, setTotals] = useState({
+    fetched: 0,
+    eligible: 0,
+    inserted: 0,
+    skipped: 0,
+    invalid: 0,
+  });
+
+  const fetchOsm = async (endpoint: string) => {
+    const r = await fetch(endpoint, {
+      method: "POST",
+      headers: { "Content-Type": "application/x-www-form-urlencoded" },
+      body: "data=" + encodeURIComponent(OSM_AMENITY_QUERY),
+    });
+    if (!r.ok) throw new Error(`Overpass HTTP ${r.status}`);
+    return r.json();
+  };
+
+  const run = async () => {
+    if (running) return;
+    if (
+      !window.confirm(
+        "Import every pub, bar, nightclub and live music venue in SE Queensland from OpenStreetMap? Existing venues won't be duplicated."
+      )
+    ) {
+      return;
+    }
+    setRunning(true);
+    setStatus("Fetching from OpenStreetMap (this can take 30–90 seconds)...");
+    setTotals({
+      fetched: 0,
+      eligible: 0,
+      inserted: 0,
+      skipped: 0,
+      invalid: 0,
+    });
+
+    const endpoints = [
+      "https://overpass-api.de/api/interpreter",
+      "https://overpass.kumi.systems/api/interpreter",
+      "https://overpass.private.coffee/api/interpreter",
+    ];
+
+    let osmData: any = null;
+    let lastErr: any = null;
+    for (const ep of endpoints) {
+      try {
+        osmData = await fetchOsm(ep);
+        break;
+      } catch (e) {
+        lastErr = e;
+      }
+    }
+    if (!osmData) {
+      setStatus(`Failed to fetch from OpenStreetMap: ${lastErr?.message}`);
+      setRunning(false);
+      return;
+    }
+
+    const elements: any[] = Array.isArray(osmData.elements)
+      ? osmData.elements
+      : [];
+
+    const payload: any[] = [];
+    for (const el of elements) {
+      const tags = el.tags || {};
+      const name = tags.name && String(tags.name).trim();
+      if (!name) continue;
+
+      const lat =
+        typeof el.lat === "number"
+          ? el.lat
+          : typeof el.center?.lat === "number"
+          ? el.center.lat
+          : null;
+      const lng =
+        typeof el.lon === "number"
+          ? el.lon
+          : typeof el.center?.lon === "number"
+          ? el.center.lon
+          : null;
+      if (lat == null || lng == null) continue;
+
+      const housenum = tags["addr:housenumber"];
+      const street = tags["addr:street"];
+      const suburb =
+        tags["addr:suburb"] || tags["addr:district"] || null;
+      const city = tags["addr:city"] || null;
+      const state = tags["addr:state"] || "QLD";
+      const postcode = tags["addr:postcode"] || null;
+
+      // Real address requirement: must have either a street address or a
+      // suburb/city — otherwise skip (OSM POIs without any addr tags are
+      // often non-establishments or sloppy entries).
+      const hasStreet = housenum && street;
+      const hasLocality = suburb || city;
+      if (!hasStreet && !hasLocality) continue;
+
+      const address =
+        hasStreet
+          ? `${housenum} ${street}`
+          : street
+          ? String(street)
+          : null;
+
+      const website =
+        tags["contact:website"] || tags.website || tags.url || null;
+      const instagram = tags["contact:instagram"] || null;
+
+      payload.push({
+        externalPlaceId: `osm:${el.type}:${el.id}`,
+        name: name.slice(0, 200),
+        lat,
+        lng,
+        address,
+        suburb,
+        city,
+        state,
+        postcode,
+        website,
+        instagram,
+        source: "osm",
+      });
+    }
+
+    setTotals((t) => ({
+      ...t,
+      fetched: elements.length,
+      eligible: payload.length,
+    }));
+
+    if (payload.length === 0) {
+      setStatus("No eligible venues with addresses found.");
+      setRunning(false);
+      return;
+    }
+
+    setStatus(
+      `Got ${payload.length} venue(s) from OpenStreetMap. Saving to database...`
+    );
+
+    let inserted = 0;
+    let skipped = 0;
+    let invalid = 0;
+    try {
+      const CHUNK = 200;
+      for (let i = 0; i < payload.length; i += CHUNK) {
+        const chunk = payload.slice(i, i + CHUNK);
+        const res = await fetch("/api/admin/venues/import-batch", {
+          method: "POST",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ venues: chunk }),
+        });
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`HTTP ${res.status}: ${txt.slice(0, 120)}`);
+        }
+        const data = await res.json();
+        inserted += data.inserted || 0;
+        skipped += data.skipped || 0;
+        invalid += data.invalid || 0;
+        setTotals({
+          fetched: elements.length,
+          eligible: payload.length,
+          inserted,
+          skipped,
+          invalid,
+        });
+        setStatus(
+          `Saving... ${Math.min(i + CHUNK, payload.length)} / ${
+            payload.length
+          }`
+        );
+      }
+      setStatus(
+        `Done. Imported ${inserted} new venue(s). ${skipped} already existed.`
+      );
+    } catch (err: any) {
+      setStatus(`Error while saving: ${err?.message || "unknown"}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 space-y-1">
+      <Button
+        variant="outline"
+        onClick={run}
+        disabled={running}
+        data-testid="button-import-osm-venues"
+      >
+        {running
+          ? "Importing..."
+          : "Import SE QLD pubs, bars & venues (OSM)"}
+      </Button>
+      {status && (
+        <div
+          className="text-xs text-muted-foreground"
+          data-testid="text-osm-import-status"
+        >
+          {status}
+        </div>
+      )}
+      {(totals.fetched > 0 || totals.inserted > 0) && (
+        <div
+          className="text-xs text-muted-foreground"
+          data-testid="text-osm-import-totals"
+        >
+          Fetched: {totals.fetched} · Eligible: {totals.eligible} · New:{" "}
+          {totals.inserted} · Already had: {totals.skipped}
+          {totals.invalid > 0 && ` · Invalid: ${totals.invalid}`}
         </div>
       )}
     </div>

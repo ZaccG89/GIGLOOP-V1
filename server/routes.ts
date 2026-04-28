@@ -1732,6 +1732,125 @@ if (
 });
 
   app.post(
+    "/api/admin/venues/import-batch",
+    requireAuth,
+    async (req: any, res: Response) => {
+      try {
+        const user = await storage.getUser(req.userId);
+        if (
+          (user as any)?.role !== "admin" &&
+          !(user as any)?.email?.includes("admin") &&
+          (user as any)?.username !== "Admin"
+        ) {
+          return res.status(403).json({ message: "Admin only" });
+        }
+
+        const incoming: any[] = Array.isArray(req.body?.venues)
+          ? req.body.venues
+          : [];
+        if (incoming.length === 0) {
+          return res.json({
+            inserted: 0,
+            skipped: 0,
+            invalid: 0,
+            total: 0,
+          });
+        }
+
+        // Validate / normalise each row
+        const valid: any[] = [];
+        const seen = new Set<string>();
+        let invalid = 0;
+        for (const v of incoming) {
+          const externalPlaceId =
+            typeof v?.externalPlaceId === "string"
+              ? v.externalPlaceId.trim()
+              : "";
+          const name = typeof v?.name === "string" ? v.name.trim() : "";
+          const lat = Number(v?.lat);
+          const lng = Number(v?.lng);
+          if (
+            !externalPlaceId ||
+            !name ||
+            !Number.isFinite(lat) ||
+            !Number.isFinite(lng)
+          ) {
+            invalid++;
+            continue;
+          }
+          if (seen.has(externalPlaceId)) continue;
+          seen.add(externalPlaceId);
+          valid.push({
+            externalPlaceId,
+            name: name.slice(0, 200),
+            lat,
+            lng,
+            address:
+              typeof v.address === "string" ? v.address.slice(0, 200) : null,
+            suburb:
+              typeof v.suburb === "string" ? v.suburb.slice(0, 100) : null,
+            city: typeof v.city === "string" ? v.city.slice(0, 100) : null,
+            state:
+              typeof v.state === "string" ? v.state.slice(0, 50) : null,
+            postcode:
+              typeof v.postcode === "string"
+                ? v.postcode.slice(0, 20)
+                : null,
+            website:
+              typeof v.website === "string" ? v.website.slice(0, 300) : null,
+            instagram:
+              typeof v.instagram === "string"
+                ? v.instagram.slice(0, 100)
+                : null,
+            source: typeof v.source === "string" ? v.source : "osm",
+          });
+        }
+
+        if (valid.length === 0) {
+          return res.json({
+            inserted: 0,
+            skipped: 0,
+            invalid,
+            total: incoming.length,
+          });
+        }
+
+        // Find which externalPlaceIds already exist
+        const externalIds = valid.map((v) => v.externalPlaceId);
+        const existing = await db
+          .select({ externalPlaceId: venues.externalPlaceId })
+          .from(venues)
+          .where(inArray(venues.externalPlaceId, externalIds));
+        const existingSet = new Set(
+          existing.map((e: any) => e.externalPlaceId).filter(Boolean)
+        );
+
+        const toInsert = valid.filter(
+          (v) => !existingSet.has(v.externalPlaceId)
+        );
+
+        if (toInsert.length > 0) {
+          // Insert in chunks to keep query size reasonable
+          for (let i = 0; i < toInsert.length; i += 100) {
+            const chunk = toInsert.slice(i, i + 100);
+            await db.insert(venues).values(chunk as any);
+          }
+        }
+
+        return res.json({
+          inserted: toInsert.length,
+          skipped: valid.length - toInsert.length,
+          invalid,
+          total: incoming.length,
+        });
+      } catch (err) {
+        console.error("VENUE IMPORT ERROR:", err);
+        return res.status(500).json({ message: "Import failed" });
+      }
+    }
+  );
+
+  app.post(
     "/api/admin/venues/backfill-coords",
     requireAuth,
     async (req: any, res: Response) => {
