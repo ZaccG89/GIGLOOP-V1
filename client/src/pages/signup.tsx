@@ -1,10 +1,16 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useLocation } from "wouter";
 import { useToast } from "@/hooks/use-toast";
 
 export default function Signup() {
   const [, setLocation] = useLocation();
   const { toast } = useToast();
+
+  const nextPath = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const raw = new URLSearchParams(window.location.search).get("next") || "";
+    return raw && raw.startsWith("/") ? raw : "";
+  }, []);
 
   const [displayName, setDisplayName] = useState("");
   const [username, setUsername] = useState("");
@@ -34,7 +40,7 @@ export default function Signup() {
         throw new Error(data.message || "Signup failed");
       }
 
-      window.location.href = "/profile";
+      window.location.href = nextPath || "/profile";
     } catch (err: any) {
       toast({
         title: "Signup failed",
@@ -100,7 +106,13 @@ export default function Signup() {
 
         <button
           type="button"
-          onClick={() => setLocation("/login")}
+          onClick={() =>
+            setLocation(
+              nextPath
+                ? `/login?next=${encodeURIComponent(nextPath)}`
+                : "/login",
+            )
+          }
           className="text-sm text-muted-foreground"
         >
           Already have an account? Log in

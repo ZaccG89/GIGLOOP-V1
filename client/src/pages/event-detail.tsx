@@ -47,6 +47,22 @@ export default function EventDetail() {
     window.location.href = "/";
   };
 
+  // After signup/login, automatically open the ticket URL the user originally tapped.
+  useEffect(() => {
+    if (!user || !user.email) return;
+    let pending: string | null = null;
+    try {
+      pending = sessionStorage.getItem("pendingTicketUrl");
+    } catch {}
+    if (!pending) return;
+    try {
+      sessionStorage.removeItem("pendingTicketUrl");
+    } catch {}
+    if (/^https?:\/\//i.test(pending)) {
+      window.open(pending, "_blank", "noopener,noreferrer");
+    }
+  }, [user]);
+
   useEffect(() => {
     let cancelled = false;
 
@@ -302,11 +318,32 @@ export default function EventDetail() {
   </div>
 )}
 
-          <div className="pt-1">
+          <div className="pt-1 space-y-3">
             {ticketUrl ? (
               <button
-                onClick={() => window.open(ticketUrl, "_blank", "noopener,noreferrer")}
+                onClick={() => {
+                  if (!user || !user.email) {
+                    try {
+                      sessionStorage.setItem(
+                        "pendingTicketUrl",
+                        ticketUrl,
+                      );
+                    } catch {}
+                    setLocation(
+                      `/signup?next=${encodeURIComponent(
+                        `/events/${eventId}`,
+                      )}`,
+                    );
+                    return;
+                  }
+                  window.open(
+                    ticketUrl,
+                    "_blank",
+                    "noopener,noreferrer",
+                  );
+                }}
                 className="w-full py-4 rounded-2xl bg-purple-600/90 hover:bg-purple-500 text-white text-xl font-semibold border border-purple-400/20"
+                data-testid="button-get-tickets"
               >
                 Get Tickets
               </button>
@@ -325,6 +362,14 @@ export default function EventDetail() {
               >
                 Contact Venue for Tickets
               </button>
+            )}
+            {(!user || !user.email) && (
+              <p
+                className="text-center text-xs text-white/55"
+                data-testid="text-signup-prompt"
+              >
+                You'll need a free GigLoop account to grab tickets.
+              </p>
             )}
           </div>
         </div>

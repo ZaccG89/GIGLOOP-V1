@@ -6,6 +6,7 @@ import { useToast } from "@/hooks/use-toast";import { useAuth } from "@/hooks/us
 import { LockedFeatureModal } from "@/components/LockedFeatureModal";
 import { Card } from "@/components/ui/card";
 import { useGuestLock } from "@/hooks/use-guest-lock";
+import { buildShareCard } from "@/lib/buildShareCard";
 
 interface GigCardProps {
   item: any;
@@ -194,7 +195,7 @@ export default function GigCard({
       event.venueName ? ` at ${event.venueName}` : ""
     }${event.startTime ? ` — ${format(new Date(event.startTime), "EEE d MMM h:mma").replace(":00", "")}` : ""}`;
 
-    let imageFile: File | null = null;
+    let posterBlob: Blob | null = null;
     if (event.imageUrl && /^https?:\/\//i.test(event.imageUrl)) {
       try {
         const ctrl = new AbortController();
@@ -207,22 +208,45 @@ export default function GigCard({
         if (imgRes.ok) {
           const blob = await imgRes.blob();
           if (blob.size > 0 && blob.size <= 8 * 1024 * 1024) {
-            const ext = (blob.type.split("/")[1] || "jpg").replace(
-              "jpeg",
-              "jpg"
-            );
-            const safeName =
-              (event.name || "gig")
-                .replace(/[^a-z0-9]+/gi, "-")
-                .slice(0, 40) || "gig";
-            imageFile = new File([blob], `${safeName}.${ext}`, {
-              type: blob.type || "image/jpeg",
-            });
+            posterBlob = blob;
           }
         }
       } catch (err) {
         console.warn("Could not fetch image for share:", err);
       }
+    }
+
+    const safeName =
+      (event.name || "gig").replace(/[^a-z0-9]+/gi, "-").slice(0, 40) ||
+      "gig";
+
+    let imageFile: File | null = null;
+    try {
+      const cardBlob = await buildShareCard({
+        name: event.name,
+        venueName: event.venueName,
+        city: event.city,
+        startTime: event.startTime,
+        imageBlob: posterBlob,
+        locationLabel,
+      });
+      if (cardBlob) {
+        imageFile = new File([cardBlob], `${safeName}.png`, {
+          type: "image/png",
+        });
+      }
+    } catch (err) {
+      console.warn("Could not build share card:", err);
+    }
+    // Fallback to raw poster if card generation failed
+    if (!imageFile && posterBlob) {
+      const ext = (posterBlob.type.split("/")[1] || "jpg").replace(
+        "jpeg",
+        "jpg"
+      );
+      imageFile = new File([posterBlob], `${safeName}.${ext}`, {
+        type: posterBlob.type || "image/jpeg",
+      });
     }
 
     try {
@@ -276,9 +300,19 @@ export default function GigCard({
     e.preventDefault();
     e.stopPropagation();
 
-    if (event.ticketUrl) {
-      window.open(event.ticketUrl, "_blank", "noopener,noreferrer");
+    if (!event.ticketUrl) return;
+
+    if (isGuest) {
+      try {
+        sessionStorage.setItem("pendingTicketUrl", event.ticketUrl);
+      } catch {}
+      window.location.href = `/signup?next=${encodeURIComponent(
+        `/events/${event.id}`
+      )}`;
+      return;
     }
+
+    window.open(event.ticketUrl, "_blank", "noopener,noreferrer");
   };
 
  

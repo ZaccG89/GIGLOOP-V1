@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { ArrowRight } from "lucide-react";
 import { useLocation } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
@@ -18,11 +18,21 @@ export default function Login() {
   const isRealUser = !!user?.email;
   const isGuest = !!user && !user.email;
 
+  const nextPath = useMemo(() => {
+    if (typeof window === "undefined") return "";
+    const raw = new URLSearchParams(window.location.search).get("next") || "";
+    return raw && raw.startsWith("/") ? raw : "";
+  }, []);
+
   useEffect(() => {
     if (!isLoading && isRealUser) {
-      setLocation("/");
+      if (nextPath) {
+        window.location.href = nextPath;
+      } else {
+        setLocation("/");
+      }
     }
-  }, [isLoading, isRealUser, setLocation]);
+  }, [isLoading, isRealUser, nextPath, setLocation]);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -53,7 +63,11 @@ export default function Login() {
       queryClient.setQueryData(["/api/auth/me"], data);
       await queryClient.invalidateQueries({ queryKey: ["/api/auth/me"] });
 
-      setLocation("/");
+      if (nextPath) {
+        window.location.href = nextPath;
+      } else {
+        setLocation("/");
+      }
     } catch (err: any) {
       toast({
         title: "Login failed",
