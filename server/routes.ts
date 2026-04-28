@@ -7,7 +7,7 @@ import cookieParser from "cookie-parser";
 import multer from "multer";
 import bcrypt from "bcryptjs";
 import { z } from "zod";
-import { eq, and, or, ilike, like, inArray } from "drizzle-orm";
+import { eq, and, or, ilike, like, inArray, isNull } from "drizzle-orm";
 import { storage } from "./storage";
 import { api } from "@shared/routes";
 import { requireAuth, createSession, verifySession } from "./auth";
@@ -1730,6 +1730,164 @@ if (
     return res.status(500).json({ message: "Backfill failed" });
   }
 });
+
+  app.post(
+    "/api/admin/venues/backfill-coords",
+    requireAuth,
+    async (req: any, res: Response) => {
+      try {
+        const user = await storage.getUser(req.userId);
+        if (
+          (user as any)?.role !== "admin" &&
+          !(user as any)?.email?.includes("admin") &&
+          (user as any)?.username !== "Admin"
+        ) {
+          return res.status(403).json({ message: "Admin only" });
+        }
+
+        const limit = Math.min(
+          Math.max(Number(req.query.limit) || 25, 1),
+          100
+        );
+
+        const missing = await db
+          .select()
+          .from(venues)
+          .where(or(isNull(venues.lat), isNull(venues.lng)))
+          .limit(limit);
+
+        const sleep = (ms: number) =>
+          new Promise((r) => setTimeout(r, ms));
+
+        let updated = 0;
+        let skipped = 0;
+        let failed = 0;
+        const details: any[] = [];
+
+        for (let i = 0; i < missing.length; i++) {
+          const v: any = missing[i];
+
+          const parts = [
+            v.address,
+            v.suburb,
+            v.city,
+            v.state,
+            v.postcode,
+            "Australia",
+          ]
+            .map((s: any) => (s ? String(s).trim() : ""))
+            .filter(Boolean);
+
+          const named = [v.name, ...parts]
+            .map((s: any) => (s ? String(s).trim() : ""))
+            .filter(Boolean);
+
+          const queries = [parts.join(", "), named.join(", ")].filter(
+            (q, idx, arr) => q && arr.indexOf(q) === idx
+          );
+
+          if (queries.length === 0) {
+            skipped++;
+            details.push({ id: v.id, name: v.name, status: "no-address" });
+            continue;
+          }
+
+          let coords: { lat: number; lng: number } | null = null;
+          let triedQuery: string | null = null;
+          let lastError: string | null = null;
+
+          for (const q of queries) {
+            triedQuery = q;
+            try {
+              const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+                q
+              )}&format=json&limit=1&countrycodes=au`;
+              const r = await fetch(url, {
+                headers: {
+                  "User-Agent":
+                    "GigLoop/1.0 (https://gigloop-v1.onrender.com)",
+                  "Accept-Language": "en",
+                },
+              });
+              if (r.ok) {
+                const data: { lat: string; lon: string }[] = await r.json();
+                if (data.length > 0) {
+                  coords = {
+                    lat: Number(data[0].lat),
+                    lng: Number(data[0].lon),
+                  };
+                  break;
+                }
+              } else {
+                lastError = `HTTP ${r.status}`;
+              }
+            } catch (e: any) {
+              lastError = e?.message || "fetch failed";
+            }
+            await sleep(1100);
+          }
+
+          if (coords) {
+            await db
+              .update(venues)
+              .set({ lat: coords.lat, lng: coords.lng })
+              .where(eq(venues.id, v.id));
+
+            const eventUpdate = await db
+              .update(events)
+              .set({ venueLat: coords.lat, venueLng: coords.lng })
+              .where(
+                and(
+                  eq(events.venueName, v.name),
+                  or(isNull(events.venueLat), isNull(events.venueLng))
+                )
+              )
+              .returning({ id: events.id });
+
+            updated++;
+            details.push({
+              id: v.id,
+              name: v.name,
+              status: "ok",
+              query: triedQuery,
+              lat: coords.lat,
+              lng: coords.lng,
+              eventsUpdated: eventUpdate.length,
+            });
+          } else {
+            failed++;
+            details.push({
+              id: v.id,
+              name: v.name,
+              status: "no-match",
+              query: triedQuery,
+              error: lastError,
+            });
+          }
+
+          if (i < missing.length - 1) await sleep(1100);
+        }
+
+        const remaining = await db
+          .select({ id: venues.id })
+          .from(venues)
+          .where(or(isNull(venues.lat), isNull(venues.lng)));
+
+        return res.json({
+          success: true,
+          processed: missing.length,
+          updated,
+          skipped,
+          failed,
+          remaining: remaining.length,
+          details,
+        });
+      } catch (err) {
+        console.error("VENUE BACKFILL ERROR:", err);
+        return res.status(500).json({ message: "Backfill failed" });
+      }
+    }
+  );
 
   app.get(api.admin.submissions.path, requireAdmin, async (_req: Request, res: Response) => {
     const submissions = await storage.getPendingGigSubmissions();

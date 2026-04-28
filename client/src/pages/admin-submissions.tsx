@@ -566,6 +566,7 @@ const createEvent = useMutation({
     <p className="text-sm text-muted-foreground">
       Search and edit existing venues or create new ones.
     </p>
+    <BackfillVenueCoordsButton />
   </div>
 
   <Button
@@ -1160,5 +1161,89 @@ const createEvent = useMutation({
         </>
       )}
     </Layout>
+  );
+}
+
+function BackfillVenueCoordsButton() {
+  const [running, setRunning] = useState(false);
+  const [status, setStatus] = useState<string>("");
+  const [totals, setTotals] = useState({
+    updated: 0,
+    failed: 0,
+    skipped: 0,
+    remaining: null as number | null,
+  });
+
+  const runBatch = async (auto: boolean) => {
+    setRunning(true);
+    if (!auto) {
+      setStatus("Looking up coordinates for venues...");
+      setTotals({ updated: 0, failed: 0, skipped: 0, remaining: null });
+    }
+    let agg = { updated: 0, failed: 0, skipped: 0 };
+    let remaining = 0;
+    try {
+      // Run up to 4 batches (~25 each = 100 venues max per click)
+      for (let batch = 0; batch < 4; batch++) {
+        setStatus(
+          `Batch ${batch + 1}: looking up coordinates (this can take ~30 sec)...`
+        );
+        const res = await fetch(
+          "/api/admin/venues/backfill-coords?limit=25",
+          { method: "POST", credentials: "include" }
+        );
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(`HTTP ${res.status}: ${txt.slice(0, 120)}`);
+        }
+        const data = await res.json();
+        agg.updated += data.updated || 0;
+        agg.failed += data.failed || 0;
+        agg.skipped += data.skipped || 0;
+        remaining = data.remaining ?? 0;
+        setTotals({ ...agg, remaining });
+        if (data.processed === 0 || remaining === 0) break;
+      }
+      setStatus(
+        remaining > 0
+          ? `Done with this run. ${remaining} venue(s) still need coordinates — click again to continue.`
+          : `All done! Every venue now has coordinates.`
+      );
+    } catch (err: any) {
+      setStatus(`Failed: ${err?.message || "unknown error"}`);
+    } finally {
+      setRunning(false);
+    }
+  };
+
+  return (
+    <div className="mt-3 space-y-1">
+      <Button
+        variant="outline"
+        onClick={() => runBatch(false)}
+        disabled={running}
+        data-testid="button-backfill-venue-coords"
+      >
+        {running ? "Backfilling..." : "Backfill missing venue coordinates"}
+      </Button>
+      {status && (
+        <div
+          className="text-xs text-muted-foreground"
+          data-testid="text-backfill-status"
+        >
+          {status}
+        </div>
+      )}
+      {(totals.updated > 0 || totals.failed > 0 || totals.skipped > 0) && (
+        <div
+          className="text-xs text-muted-foreground"
+          data-testid="text-backfill-totals"
+        >
+          Updated: {totals.updated} · Failed: {totals.failed} · Skipped:{" "}
+          {totals.skipped}
+          {totals.remaining != null && ` · Remaining: ${totals.remaining}`}
+        </div>
+      )}
+    </div>
   );
 }
