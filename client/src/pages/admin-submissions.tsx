@@ -94,6 +94,88 @@ const [venueForm, setVenueForm] = useState({
   lat: "",
   lng: "",
 });
+const [geocodeLoading, setGeocodeLoading] = useState(false);
+const [geocodeMsg, setGeocodeMsg] = useState("");
+
+const lookupVenueCoords = async (opts?: { force?: boolean }) => {
+  const force = opts?.force === true;
+  if (!force && (venueForm.lat.trim() !== "" || venueForm.lng.trim() !== "")) {
+    return;
+  }
+  const parts = [
+    venueForm.address,
+    venueForm.suburb,
+    venueForm.city,
+    venueForm.state,
+    venueForm.postcode,
+    "Australia",
+  ]
+    .map((s) => (s || "").trim())
+    .filter(Boolean);
+  const named = [venueForm.name, ...parts]
+    .map((s) => (s || "").trim())
+    .filter(Boolean);
+  if (parts.length < 2 && named.length < 2) {
+    if (force) setGeocodeMsg("Add an address or suburb first.");
+    return;
+  }
+  setGeocodeLoading(true);
+  setGeocodeMsg("");
+  try {
+    const tries = [parts.join(", "), named.join(", ")].filter(
+      (q, i, a) => q && a.indexOf(q) === i
+    );
+    let found: { lat: string; lon: string } | null = null;
+    for (const q of tries) {
+      const res = await fetch(
+        `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(
+          q
+        )}&format=json&limit=1&countrycodes=au`,
+        { headers: { "Accept-Language": "en" } }
+      );
+      if (!res.ok) continue;
+      const data: { lat: string; lon: string }[] = await res.json();
+      if (data.length > 0) {
+        found = data[0];
+        break;
+      }
+    }
+    if (found) {
+      setVenueForm((prev) => ({
+        ...prev,
+        lat: Number(found!.lat).toFixed(6),
+        lng: Number(found!.lon).toFixed(6),
+      }));
+      setGeocodeMsg("Coordinates filled from address.");
+    } else if (force) {
+      setGeocodeMsg("Couldn't find a match. Enter coordinates manually.");
+    }
+  } catch {
+    if (force) setGeocodeMsg("Lookup failed. Enter coordinates manually.");
+  } finally {
+    setGeocodeLoading(false);
+  }
+};
+
+useEffect(() => {
+  if (venueForm.lat.trim() !== "" || venueForm.lng.trim() !== "") return;
+  const hasEnough =
+    (venueForm.address.trim().length >= 4 ||
+      venueForm.suburb.trim().length >= 3) &&
+    (venueForm.city.trim().length >= 2 || venueForm.suburb.trim().length >= 3);
+  if (!hasEnough) return;
+  const t = setTimeout(() => {
+    lookupVenueCoords();
+  }, 1200);
+  return () => clearTimeout(t);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+}, [
+  venueForm.address,
+  venueForm.suburb,
+  venueForm.city,
+  venueForm.state,
+  venueForm.postcode,
+]);
 
 useEffect(() => {
   const runVenueSearch = async () => {
@@ -649,8 +731,12 @@ const createEvent = useMutation({
     <label className="block text-sm font-bold text-white mb-2">Latitude</label>
     <Input
       value={venueForm.lat}
-      onChange={(e) => setVenueForm({ ...venueForm, lat: e.target.value })}
-      placeholder="-26.798"
+      onChange={(e) => {
+        setVenueForm({ ...venueForm, lat: e.target.value });
+        if (geocodeMsg) setGeocodeMsg("");
+      }}
+      placeholder={geocodeLoading ? "Looking up..." : "-26.798"}
+      disabled={geocodeLoading}
     />
   </div>
 
@@ -658,9 +744,44 @@ const createEvent = useMutation({
     <label className="block text-sm font-bold text-white mb-2">Longitude</label>
     <Input
       value={venueForm.lng}
-      onChange={(e) => setVenueForm({ ...venueForm, lng: e.target.value })}
-      placeholder="153.1364"
+      onChange={(e) => {
+        setVenueForm({ ...venueForm, lng: e.target.value });
+        if (geocodeMsg) setGeocodeMsg("");
+      }}
+      placeholder={geocodeLoading ? "Looking up..." : "153.1364"}
+      disabled={geocodeLoading}
     />
+  </div>
+
+  <div className="md:col-span-2 -mt-2 flex flex-wrap items-center gap-3">
+    <Button
+      variant="outline"
+      onClick={() => lookupVenueCoords({ force: true })}
+      disabled={geocodeLoading}
+      data-testid="button-lookup-venue-coords"
+    >
+      {geocodeLoading ? "Looking up..." : "Look up coordinates from address"}
+    </Button>
+    {(venueForm.lat || venueForm.lng) && !geocodeLoading && (
+      <Button
+        variant="outline"
+        onClick={() => {
+          setVenueForm({ ...venueForm, lat: "", lng: "" });
+          setGeocodeMsg("");
+        }}
+        data-testid="button-clear-venue-coords"
+      >
+        Clear coordinates
+      </Button>
+    )}
+    {geocodeMsg && (
+      <span
+        className="text-xs text-muted-foreground"
+        data-testid="text-geocode-msg"
+      >
+        {geocodeMsg}
+      </span>
+    )}
   </div>
 
       <div className="md:col-span-2">
