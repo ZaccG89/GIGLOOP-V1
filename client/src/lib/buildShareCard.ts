@@ -1,5 +1,7 @@
-// Build a portrait PNG that visually represents a gig card for native sharing.
-// Pure browser Canvas — no dependencies, no server round-trip.
+// Build a portrait PNG that visually represents a gig for native sharing.
+// Pure browser Canvas — no dependencies. Designed as a static poster: the
+// real interactivity comes from the URL in the share text and the OG meta
+// preview that platforms render when the URL is pasted.
 
 export interface ShareCardInput {
   name: string;
@@ -8,6 +10,7 @@ export interface ShareCardInput {
   startTime?: string | Date | null;
   imageBlob?: Blob | null;
   locationLabel?: string | null;
+  shareUrl?: string | null;
 }
 
 const W = 1080;
@@ -116,7 +119,6 @@ function wrapLines(
       if (line) lines.push(line);
       line = word;
       if (lines.length === maxLines - 1) {
-        // Force ellipsis on last allowed line
         let last = line;
         while (
           ctx.measureText(last + "…").width > maxWidth &&
@@ -136,18 +138,8 @@ function wrapLines(
 function fmtDate(d: Date) {
   const days = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
   const months = [
-    "Jan",
-    "Feb",
-    "Mar",
-    "Apr",
-    "May",
-    "Jun",
-    "Jul",
-    "Aug",
-    "Sep",
-    "Oct",
-    "Nov",
-    "Dec",
+    "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+    "Jul", "Aug", "Sep", "Oct", "Nov", "Dec",
   ];
   const day = days[d.getDay()];
   const dom = d.getDate();
@@ -159,6 +151,15 @@ function fmtDate(d: Date) {
   if (h === 0) h = 12;
   const min = m.toString().padStart(2, "0");
   return `${day}, ${mon} ${dom} • ${h}${m === 0 ? "" : `:${min}`}${ampm}`;
+}
+
+function shortDomain(url: string): string {
+  try {
+    const u = new URL(url);
+    return u.host.replace(/^www\./, "");
+  } catch {
+    return url.replace(/^https?:\/\//, "").split("/")[0] || "gigloop";
+  }
 }
 
 export async function buildShareCard(
@@ -183,11 +184,11 @@ export async function buildShareCard(
   roundedRectPath(ctx, cardX, cardY, cardW, cardH, 40);
   ctx.fill();
 
-  // Image area (top portion of card)
+  // Image area (top portion of card) — taller now since no fake buttons below
   const imgX = cardX;
   const imgY = cardY;
   const imgW = cardW;
-  const imgH = 720;
+  const imgH = 1050;
 
   ctx.save();
   roundedRectPath(ctx, imgX, imgY, imgW, imgH, 40);
@@ -198,7 +199,6 @@ export async function buildShareCard(
       const img = await loadImageFromBlob(input.imageBlob);
       drawCover(ctx, img, imgX, imgY, imgW, imgH);
     } catch {
-      // Fallback: gradient
       const g = ctx.createLinearGradient(imgX, imgY, imgX, imgY + imgH);
       g.addColorStop(0, "#1a1d2e");
       g.addColorStop(1, "#3b1d6b");
@@ -213,7 +213,7 @@ export async function buildShareCard(
     ctx.fillRect(imgX, imgY, imgW, imgH);
   }
 
-  // Bottom gradient overlay
+  // Bottom gradient overlay on the photo
   const overlay = ctx.createLinearGradient(
     0,
     imgY + imgH * 0.4,
@@ -230,111 +230,77 @@ export async function buildShareCard(
   drawPill(ctx, imgX + 32, imgY + 32, "Nearby", 32);
 
   // Location pill (bottom-right of image)
-  if (input.locationLabel) {
-    drawPill(
-      ctx,
-      imgX + imgW - 32,
-      imgY + imgH - 70,
-      input.locationLabel,
-      30,
-      true,
-    );
-  } else {
-    const loc =
-      [input.venueName, input.city].filter(Boolean).join(" • ") || "";
-    if (loc) {
-      drawPill(ctx, imgX + imgW - 32, imgY + imgH - 70, loc, 30, true);
-    }
+  const locText =
+    input.locationLabel ||
+    [input.venueName, input.city].filter(Boolean).join(" • ") ||
+    "";
+  if (locText) {
+    drawPill(ctx, imgX + imgW - 32, imgY + imgH - 70, locText, 30, true);
   }
 
-  // ---------- Text content ----------
+  // ---------- Text content over the bottom of the photo ----------
   const textX = cardX + 50;
   const textW = cardW - 100;
-  let y = imgY + imgH + 70;
 
-  // Title
+  // We want title block to sit just above the image's bottom edge
+  let y = imgY + imgH - 280;
+
+  // Title (white, bold, up to 2 lines)
   ctx.fillStyle = "#fff";
-  ctx.font = `700 56px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  ctx.font = `700 60px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
   ctx.textAlign = "left";
   ctx.textBaseline = "alphabetic";
+  ctx.shadowColor = "rgba(0,0,0,0.55)";
+  ctx.shadowBlur = 18;
   const titleLines = wrapLines(ctx, input.name || "Live gig", textW, 2);
   for (const line of titleLines) {
     ctx.fillText(line, textX, y);
-    y += 64;
+    y += 70;
   }
 
   // Venue
   if (input.venueName) {
-    y += 12;
-    ctx.fillStyle = "rgba(255,255,255,0.72)";
+    y += 4;
+    ctx.fillStyle = "rgba(255,255,255,0.85)";
     ctx.font = `500 36px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
     ctx.fillText(input.venueName, textX, y);
-    y += 44;
+    y += 46;
   }
 
   // Date / time
   if (input.startTime) {
     const d = new Date(input.startTime as any);
     if (!Number.isNaN(d.getTime())) {
-      ctx.fillStyle = "rgba(255,255,255,0.5)";
+      ctx.fillStyle = "rgba(255,255,255,0.7)";
       ctx.font = `400 32px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
       ctx.fillText(fmtDate(d), textX, y);
-      y += 40;
     }
   }
+  ctx.shadowBlur = 0;
 
-  // Action row (Soundcheck / Save / Share)
-  y += 36;
-  const rowH = 96;
-  const gap = 18;
-  const btnW = (textW - gap * 2) / 3;
+  // ---------- Footer band: GigLoop branding + visible URL ----------
+  // This sits below the photo, inside the dark card, so the URL reads clearly.
+  const footerY = imgY + imgH + 36;
+  const footerH = cardH - (footerY - cardY) - 36;
 
-  // Soundcheck button
-  ctx.fillStyle = "rgba(255,255,255,0.05)";
-  ctx.strokeStyle = "rgba(255,255,255,0.2)";
-  ctx.lineWidth = 2;
-  roundedRectPath(ctx, textX, y, btnW, rowH, 24);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.font = `500 30px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-  ctx.textAlign = "center";
-  ctx.textBaseline = "middle";
-  ctx.fillText("🎧  Soundcheck", textX + btnW / 2, y + rowH / 2);
-
-  // Save button
-  const saveX = textX + btnW + gap;
-  ctx.fillStyle = "rgba(255,255,255,0.05)";
-  roundedRectPath(ctx, saveX, y, btnW, rowH, 24);
-  ctx.fill();
-  ctx.stroke();
-  ctx.fillStyle = "rgba(255,255,255,0.85)";
-  ctx.fillText("🔖  Save", saveX + btnW / 2, y + rowH / 2);
-
-  // Share button (filled purple)
-  const shareX = saveX + btnW + gap;
-  ctx.fillStyle = "rgba(168,85,247,0.95)";
-  roundedRectPath(ctx, shareX, y, btnW, rowH, 24);
-  ctx.fill();
-  ctx.fillStyle = "#fff";
-  ctx.fillText("⤴  Share", shareX + btnW / 2, y + rowH / 2);
-
-  y += rowH + 22;
-
-  // Get Tickets CTA
-  ctx.fillStyle = "rgba(168,85,247,0.95)";
-  roundedRectPath(ctx, textX, y, textW, 110, 26);
-  ctx.fill();
-  ctx.fillStyle = "#fff";
-  ctx.font = `700 40px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
-  ctx.fillText("Get Tickets", textX + textW / 2, y + 55);
-
-  // GigLoop wordmark / footer
-  ctx.fillStyle = "rgba(168,85,247,1)";
-  ctx.font = `700 38px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  // Centered "Open in GigLoop" wordmark
   ctx.textAlign = "center";
   ctx.textBaseline = "alphabetic";
-  ctx.fillText("Open in GigLoop", W / 2, cardY + cardH - 60);
+  ctx.fillStyle = "#fff";
+  ctx.font = `400 28px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillText("Open in", W / 2, footerY + 50);
+
+  ctx.fillStyle = "rgba(168,85,247,1)";
+  ctx.font = `800 64px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+  ctx.fillText("GigLoop", W / 2, footerY + 120);
+
+  // Visible URL so users can read & type it even if the link in the message
+  // gets truncated by the chat client.
+  if (input.shareUrl) {
+    ctx.fillStyle = "rgba(255,255,255,0.55)";
+    ctx.font = `500 26px "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif`;
+    ctx.fillText(shortDomain(input.shareUrl), W / 2, footerY + 165);
+  }
 
   return new Promise((resolve) => {
     canvas.toBlob((b) => resolve(b), "image/png", 0.92);

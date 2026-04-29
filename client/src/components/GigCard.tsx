@@ -229,6 +229,7 @@ export default function GigCard({
         startTime: event.startTime,
         imageBlob: posterBlob,
         locationLabel,
+        shareUrl,
       });
       if (cardBlob) {
         imageFile = new File([cardBlob], `${safeName}.png`, {
